@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""cp_lib.py (v1, 2026-11-01) - reusable helpers for the 'cycling | running' coaching project.
+"""cp_lib.py (v1.1, 2026-11-05) - reusable helpers for the 'cycling | running' coaching project.
 
 Companion to analysis_tools.py (activity files -> reports / digest) and routes_tool.py (GPX route geometry).
 This module collects everything else that was written ad hoc during the chats:
@@ -9,6 +9,7 @@ This module collects everything else that was written ad hoc during the chats:
   FIT        inspection of FIT files: structure, laps, timer events, pauses, HRV / strap quality
   RIDE       10-min block tables, best windows (power, HR, distance, speed), decoupling, HR by power, effort finder
   RUN        splits, halves, tail paces, fastest windows (reps), HR plateaus / steps / zone time, loop length
+  TESTS      4DP / Full Frontal report (sprints with a physics check, blocks, gaps, strap quality)
   CSV/DIGEST Strava activities.csv loader, weekly table, bests table, history_digest.md generator
 Needs numpy; pandas (CSV/DIGEST); scipy (PHYSICS); fitparse (FIT; pip install fitparse --break-system-packages).
 Usage:  import cp_lib as cp ; cp.speed_from_power(185, 0.004) ; python3 cp_lib.py --index   (prints the function index)
@@ -20,7 +21,8 @@ from datetime import datetime, timezone, date as _date
 import numpy as np
 
 # ----------------------------------------------------------------------------- CONFIG
-CFG = dict(ftp=175.0, z2cap=135.0, tz="Europe/Berlin", home=(50.8438, 6.8942), sun_site=(50.94, 6.96),
+CFG = dict(ftp=180.0,                                                 # working FTP (W) until the 60-min trainer test
+           z2cap=135.0, tz="Europe/Berlin", home=(50.8438, 6.8942), sun_site=(50.94, 6.96),
            mass=72.0, cda=0.38, crr=0.005, rho=1.22, eta=0.98,           # rider+bike+kit 72 kg, hoods position, cool autumn air
            ride_hr_zones=(125, 150, 170, 182), run_hr_zones=(130, 160, 175, 190),
            zone_edges=(0, .55, .75, .90, 1.05, 1.20, 1.50, 99))          # Coggan, as fractions of FTP
@@ -247,7 +249,7 @@ def hrv_quality(path, win_s=60, tol=0.25, flag_pct=5.0):
     return df, {"beats": int(len(rr)), "artefact_pct": round(bad.mean() * 100, 2), "flagged_windows": int(df["flag"].sum()), "windows": int(len(df))}
 
 
-# ----------------------------------------------------------------------------- shared loading (uses analysis_tools.py)
+# ----------------------------------------------------------------------------- LOADING (uses analysis_tools.py)
 _AT = None
 
 
@@ -463,6 +465,100 @@ def run_finish_report(path, step=1000, show=True):
     return out
 
 
+# ----------------------------------------------------------------------------- TESTS
+def top_windows(p, dur_s, n=2, sep_s=60, lo=0, hi=None):
+    """Best `n` non-overlapping mean-power windows of `dur_s` seconds in p[lo:hi] (at least `sep_s` apart). Returns a list of (start_index, mean_watts)."""
+    p = np.nan_to_num(np.asarray(p, float)); hi = len(p) if hi is None else hi; x = p[lo:hi]
+    if len(x) < dur_s: return []
+    cs = np.cumsum(np.insert(x, 0, 0.0)); w = (cs[dur_s:] - cs[:-dur_s]) / dur_s; out = []
+    for _ in range(n):
+        i = int(np.argmax(w))
+        if w[i] <= 0: break
+        out.append((lo + i, float(w[i]))); w[max(0, i - sep_s - dur_s):i + sep_s + dur_s] = -1
+    return out
+
+
+def sprint_energy_check(tl, s, e, mass=None, cda=0.40, crr=None, rho=None, eta=None):
+    """Plausibility check of a sprint's power (seconds s..e of the timeline): meter energy vs the physics needed for the measured acceleration plus drag.
+
+    Returns dict(meter_kj, physics_kj, ratio). A ratio of about 0.8-1.25 is consistent with the speed sensor: 1 Hz speed, its 1-2 s lag and an
+    assumed mass / CdA make +-20% normal, so this only catches gross meter errors. Single-sided meters (Stages) can be further off in all-out sprints."""
+    c = CFG; mass = mass or c["mass"]; crr = crr or c["crr"]; rho = rho or c["rho"]; eta = eta or c["eta"]
+    P = np.nan_to_num(tl["P"][s:e + 1]); v = np.nan_to_num(tl["S"][s:e + 1])
+    e_meter = P.sum() * eta; dke = 0.5 * mass * (v[-1] ** 2 - v[0] ** 2)
+    drag = float(np.sum(0.5 * rho * cda * v ** 3 + crr * mass * G * v))
+    phys = dke + drag
+    return dict(meter_kj=e_meter / 1000, physics_kj=phys / 1000, ratio=e_meter / phys if phys > 0 else float("nan"))
+
+
+def _block(tl, s, dur, per=60):
+    at = _at(); P = np.nan_to_num(tl["P"]); H = tl["H"]; C = tl["C"]; D = _ffill(tl["D"]); E = _ffill(tl["E"]) if "E" in tl else None
+    e = s + dur - 1; p = P[s:e + 1]; h = H[s:e + 1]; c = C[s:e + 1]
+    f = lambda z: float(np.nanmean(z)) if np.isfinite(z).any() else float("nan")
+    seg = [p[i:i + per] for i in range(0, len(p), per)]
+    out = dict(start_s=int(s), end_s=int(e), avg_w=float(p.mean()), np_w=float(at.norm_power(p)) if len(p) >= 30 else float("nan"), max_w=float(p.max()),
+               hr_avg=f(h), hr_first_min=f(h[:60]), hr_last_min=f(h[-60:]), hr_max=float(np.nanmax(h)) if np.isfinite(h).any() else float("nan"),
+               cad=f(c[c > 0]) if (c > 0).any() else float("nan"), km_from=float(D[s] / 1000), km_to=float(D[e] / 1000),
+               speed_kmh=float((D[e] - D[s]) / 1000 / (dur / 3600)), profile_w=[round(float(x.mean())) for x in seg],
+               profile_hr=[round(f(h[i:i + per])) if np.isfinite(h[i:i + per]).any() else None for i in range(0, len(p), per)])
+    if E is not None and D[e] > D[s]: out["grade_pct"] = float((E[e] - E[s]) / (D[e] - D[s]) * 100)
+    if per == 60 and len(seg) >= 4:
+        mins = [x.mean() for x in seg if len(x) == per]
+        out["cv_pct"] = float(np.std(mins) / np.mean(mins) * 100) if mins else float("nan")
+    return out
+
+
+def _gap(tl, s, e):
+    P = np.nan_to_num(tl["P"][s:e]); rec = tl["rec"][s:e]
+    return dict(start_s=int(s), end_s=int(e), seconds=int(e - s), stopped_s=int((~rec).sum()), avg_w_recorded=float(P[rec].mean()) if rec.any() else 0.0,
+                s_150_200w=int((rec & (P >= 150) & (P < 200)).sum()), s_over_200w=int((rec & (P >= 200)).sum()))
+
+
+def fourdp_report(path, show=True):
+    """Analyse a 4DP / Full Frontal file (two 5-s sprints, 5 min, 20 min, 1 min, in that order) without laps or manual input.
+
+    Finds the 5-min block as the best 5-min window, the 20 min as the best 20-min window after it, the 1 min as the best minute after the 20 min and
+    the sprints as the two best 5-s windows before the 5 min. Blocks are best windows, as in Strava's best efforts, so they can start a few seconds
+    away from the lap button (1 Nov: the best 20 min started 28 s after the lap press). Returns sprints, blocks (per-minute power / HR, CV, grade, km, speed), gaps between
+    blocks (with stopped time) and strap quality; FTP by the 4DP rule = 100% of the 20-min average."""
+    a, ex, tl = load_activity(path); P = np.nan_to_num(tl["P"])
+    five = top_windows(P, 300, 1)[0][0]
+    twenty = top_windows(P, 1200, 1, lo=five + 300)[0][0]
+    one = top_windows(P, 60, 1, lo=twenty + 1200)[0][0]
+    spr = sorted(top_windows(P, 5, 2, sep_s=30, hi=five), key=lambda x: x[0])
+    sprints = []
+    for s, w in spr:
+        ss = s
+        while ss > 0 and P[ss - 1] > 150: ss -= 1          # include the acceleration before the best 5 s
+        w0 = max(0, ss - 2)                                  # the speed sensor lags power by 1-2 s
+        sp = np.nan_to_num(tl["S"][s:s + 16]); w1 = s + int(np.argmax(sp)) + 2
+        sprints.append(dict(start_s=int(s), best5s_w=w, peak_w=float(P[s:s + 5].max()), cad=float(np.nanmean(tl["C"][s:s + 5])),
+                            speed_from_kmh=float(np.nan_to_num(tl["S"][w0]) * 3.6), speed_to_kmh=float(sp.max() * 3.6),
+                            energy=sprint_energy_check(tl, w0, w1)))
+    blocks = {"5min": _block(tl, five, 300), "20min": _block(tl, twenty, 1200), "1min": _block(tl, one, 60, per=10)}
+    gaps = {"5min->20min": _gap(tl, five + 300, twenty), "20min->1min": _gap(tl, twenty + 1200, one)}
+    strap = None
+    try:
+        df, s = hrv_quality(path); strap = dict(summary=s, flagged_minutes=[float(x) for x in df.loc[df.flag, "start_min"]])
+    except Exception:
+        pass
+    res = dict(sprints=sprints, blocks=blocks, gaps=gaps, strap=strap, ftp_4dp=blocks["20min"]["avg_w"])
+    if show:
+        for i, s in enumerate(sprints, 1):
+            print("sprint %d at %s: best 5 s %.0f W (peak %.0f), cadence %.0f, %.0f -> %.0f km/h, meter/physics %.2f" % (
+                i, fmt_t(s["start_s"]), s["best5s_w"], s["peak_w"], s["cad"], s["speed_from_kmh"], s["speed_to_kmh"], s["energy"]["ratio"]))
+        for k, b in blocks.items():
+            print("%-5s at %s: %.1f W (NP %.0f, max %.0f), HR %.0f (first min %.0f, last min %.0f, max %.0f), cad %.0f, km %.2f-%.2f, %.1f km/h%s%s" % (
+                k, fmt_t(b["start_s"]), b["avg_w"], b["np_w"], b["max_w"], b["hr_avg"], b["hr_first_min"], b["hr_last_min"], b["hr_max"], b["cad"], b["km_from"], b["km_to"],
+                b["speed_kmh"], (", grade %+.2f%%" % b["grade_pct"]) if "grade_pct" in b else "", (", CV of minutes %.1f%%" % b["cv_pct"]) if "cv_pct" in b else ""))
+            print("      W per %s: %s" % ("10 s" if k == "1min" else "minute", b["profile_w"]))
+        for k, g in gaps.items():
+            print("gap %s: %s (stopped %s), %.0f W while recording, %d s at 150-200 W, %d s above 200 W" % (k, fmt_t(g["seconds"]), fmt_t(g["stopped_s"]), g["avg_w_recorded"], g["s_150_200w"], g["s_over_200w"]))
+        if strap: print("strap: %s; flagged minutes %s" % (strap["summary"], strap["flagged_minutes"]))
+        print("FTP by the 4DP rule (100%% of the 20 min): %.0f W" % res["ftp_4dp"])
+    return res
+
+
 # ----------------------------------------------------------------------------- CSV / DIGEST
 LABS = ["5s", "15s", "30s", "1min", "2min", "3min", "5min", "8min", "10min", "15min", "20min", "30min", "45min", "60min", "90min", "120min", "150min"]
 
@@ -499,7 +595,7 @@ def csv_totals(df):
 
 
 def parse_bests(text):
-    """'5s=544@2026-10-31, 15s=448@2026-10-30, 20min=175@2026-10-31' -> {'5s': (544.0, '2026-10-31'), ...} (current Strava all-time bests, typed in by hand)."""
+    """Parse current Strava all-time bests typed in by hand, e.g. "5s=686@2026-11-01, 20min=184@2026-11-01", into {'5s': (686.0, '2026-11-01'), ...}."""
     out = {}
     for item in re.split(r"[,;]\s*", text.strip()):
         m = re.match(r"(\w+)=([\d.]+)(?:@([\d-]+))?", item.strip())
@@ -532,13 +628,16 @@ def bests_table_md(r, strava_now=None):
 
 
 def monthly_bests_md(r, extra=None):
-    """Bests by month (elapsed-based) for 5s, 1min, 5min, 10min, 20min, 60min; extra={'2026-10': {'5s': 544}} merges later Strava bests (marked *)."""
+    """Bests by month (elapsed-based) for 5s, 1min, 5min, 10min, 20min and 60min.
+
+    `extra` (e.g. {'2026-11': {'5s': 686}}) merges Strava bests set after the archive, marked *; months that only exist in `extra` get their own row."""
     cols = ["5s", "1min", "5min", "10min", "20min", "60min"]; r = r[r.np_w.notna()].copy(); r["m"] = r["date"].astype(str).str[:7]
     L = ["| Month | 5s | 1min | 5min | 10min | 20min | 60min |", "|---|---|---|---|---|---|---|"]
-    for m, g in r.groupby("m"):
-        cells = []
+    groups = dict(tuple(r.groupby("m")))
+    for m in sorted(set(groups) | set(extra or {})):
+        g = groups.get(m); cells = []
         for l in cols:
-            v = g["el_" + l].max() if g["el_" + l].notna().any() else np.nan; x = (extra or {}).get(m, {}).get(l)
+            v = g["el_" + l].max() if g is not None and g["el_" + l].notna().any() else np.nan; x = (extra or {}).get(m, {}).get(l)
             cells.append(("%.0f*" % x) if x and (not np.isfinite(v) or x > v) else ("%.0f" % v if np.isfinite(v) else "-"))
         L.append("| %s | %s |" % (m, " | ".join(cells)))
     return L
@@ -554,9 +653,11 @@ def weekly_table_md(r, ftp=None):
     return L
 
 
-def make_history_digest(rides_csv, runs_csv, out_md, strava_now=None, extra_monthly=None, ftp=175, asof="", source_note=""):
-    """Write history_digest.md from digest_rides.csv / digest_runs.csv (made by `analysis_tools.py --batch`). strava_now / extra_monthly add the bests
-    set after the archive (see parse_bests). Run this at each weekly refresh so the tables, not extra text, carry the new bests."""
+def make_history_digest(rides_csv, runs_csv, out_md, strava_now=None, extra_monthly=None, ftp=175, asof="", source_note="", after_archive_md=None):
+    """Write history_digest.md from digest_rides.csv / digest_runs.csv (made by `analysis_tools.py --batch`).
+
+    `strava_now` / `extra_monthly` add the bests set after the archive (see `parse_bests`), so the tables carry them instead of extra text.
+    `after_archive_md` (list of markdown lines) is appended as section 8 for activities newer than the archive. Run it at each refresh."""
     import pandas as pd
     r = pd.read_csv(rides_csv); r["date"] = pd.to_datetime(r["date"]).dt.strftime("%Y-%m-%d"); u = pd.read_csv(runs_csv); p = r[r.np_w.notna()]
     z = p[["z%d_min" % i for i in range(1, 8)]].sum(); t = z.sum(); wcap = (p.pct_le_cap * p.recorded_s).sum() / p.recorded_s.sum()
@@ -569,7 +670,7 @@ def make_history_digest(rides_csv, runs_csv, out_md, strava_now=None, extra_mont
          "- Strava HR-flag counter in v1/v2 is capped at 8 and says nothing for 1 Hz ride files (steady HR repeats often); judge max HR by the 30-s mean instead (columns hr_max / hr_max30 in digest_rides.csv).\n",
          "## 2. All-time bests (W)\n"] + bests_table_md(r, strava_now) + [
          "\nNotes: 120 min elapsed 144 W matches the brief. The 180-min elapsed value (86 W) is a stop-heavy artefact and not reported. The rolling 20/30-min values (183/184 W, 16 Sep) include short stops inside the window, so they overstate a continuous effort slightly. "
-         + ("Bold values in the 'Strava all-time now' column were set after the archive (30/31 Oct rides); the archive columns do not change, the rolling column is archive-only.\n" if strava_now else "\n"),
+         + ("Bold values in the 'Strava all-time now' column were set after the archive (see section 8); the archive columns do not change, the rolling column is archive-only.\n" if strava_now else "\n"),
          "## 3. Bests by month (elapsed-based, W)\n"] + monthly_bests_md(r, extra_monthly) + ["" if not extra_monthly else "\n* = Strava best effort after the archive.\n",
          "## 4. Weekly load and intensity (rides with power, FTP %d W)\n" % ftp,
          "Z1-2 = below 75% FTP (< 131 W), Z3 = 75-90% (131-157 W), Z4+ = 90% FTP and above (>= 157 W). TSS-like = duration x IF^2 x 100 from NP.\n"] + weekly_table_md(r) + [
@@ -588,26 +689,45 @@ def make_history_digest(rides_csv, runs_csv, out_md, strava_now=None, extra_mont
           "- Avg watts in Strava's activities.csv for the rides 7-20 Aug (and the MTB laps) are Strava estimates, not measured; the files contain no power. First measured power: 29 Aug.",
           "- The Garmin files also contain beat-to-beat (HRV) messages; cp_lib.hrv_quality() uses them to check HR strap artefacts.",
           "- In the 28 Oct FIT, the 'speed' field runs far slower than distance-derived speed (e.g. 5:20/km vs about 3:55/km at the finish): use the distance field for pacing."]
-    open(out_md, "w", encoding="utf-8").write("\n".join(L)); return len("\n".join(L))
+    if after_archive_md:
+        L += ["\n## 8. After the archive\n"] + list(after_archive_md)
+    open(out_md, "w", encoding="utf-8").write("\n".join(L) + "\n"); return len("\n".join(L))
 
 
 # ----------------------------------------------------------------------------- INDEX
+def _first_sentence(doc):
+    """First sentence of a docstring, joined across wrapped lines (abbreviations such as 'e.g.' do not end it)."""
+    para = " ".join(doc.strip().split("\n\n")[0].split())
+    if not para: return ""
+    safe = re.sub(r"\b(e\.g|i\.e|vs|approx|incl)\.", lambda m: m.group(0).replace(".", "\x00"), para)
+    m = re.search(r"\.(\s|$)", safe)
+    s = (safe[:m.start() + 1] if m else safe).replace("\x00", ".").strip()
+    return s if s.endswith((".", ":", "?", "!")) else s + "."
+
+
+def _md_code(text):
+    """Put tag-like tokens such as el_<dur> into backticks (markdown would hide them as HTML); text already in backticks is left alone."""
+    parts = re.split(r"(`[^`]*`)", text)
+    for i, p in enumerate(parts):
+        if not p.startswith("`"):
+            parts[i] = re.sub(r"[\w.]*<[A-Za-z_]+>[\w.]*", lambda m: "`%s`" % m.group(0), p)
+    return "".join(parts)
+
+
 def index(md=False):
     """Print the function index of this module grouped by section (md=True: markdown for README.md)."""
-    import inspect
     src = open(os.path.abspath(__file__), encoding="utf-8").read().split("\n"); sec = "(top)"; items = []
     for ln in src:
         m = re.match(r"^# -{20,} (.+)$", ln)
         if m: sec = m.group(1).strip()
         d = re.match(r"^(def|class) ([A-Za-z]\w*)", ln)
-        if d: items.append((sec, d.group(2)))
+        if d and not d.group(2).startswith("_"): items.append((sec, d.group(2)))
     cur = None; me = globals()
     for sec, name in items:
-        if sec != cur: print(("\n### " if md else "\n== ") + sec); cur = sec
-        doc = (me[name].__doc__ or "").strip().split("\n")[0]; sig = ""
-        try: sig = str(inspect.signature(me[name]))
-        except Exception: pass
-        print(("- `%s%s`: %s" if md else "  %s%s\n      %s") % (name, sig, doc))
+        if sec != cur:
+            print(("\n### " + sec.replace("analysis_tools.py", "`analysis_tools.py`")) if md else ("\n== " + sec)); cur = sec
+        doc = _first_sentence(me[name].__doc__ or "")
+        print(("- `%s`: %s" % (name, _md_code(doc))) if md else ("  %s\n      %s" % (name, doc)))
 
 
 if __name__ == "__main__":
