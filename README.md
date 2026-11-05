@@ -1,100 +1,120 @@
 # cycling_running: coaching toolkit
 
-README = index of the toolkit (it is loaded into every chat of the Project; the code itself is only read when used). Public repo; the sandbox can clone it (tested 1 Nov 2026).
-Claude cannot push to GitHub or edit Project files: new / changed files are handed over as files, Pat commits them.
+This README is the index of the toolkit. It is synced into the Project and read in every chat; the code itself is only opened when it is used.
 
-## Start of a chat that needs analysis (the sandbox resets every chat)
-```
+The repo is public and the sandbox can clone it. Claude cannot push to GitHub: new or changed files are handed over in the chat and Pat commits them.
+
+## Start of a chat that needs analysis (the sandbox resets every chat, sometimes mid-chat)
+```sh
 git clone --depth 1 https://github.com/unterrunden/cycling_running repo && cd repo
 pip install fitparse scipy pandas --break-system-packages -q
-python3 selfcheck.py        # 20 checks (about 30 s): every PASS = the toolkit still reproduces the validated numbers
+python3 selfcheck.py        # about 20 checks (about 30 s): every PASS = the toolkit still reproduces the validated numbers
 ```
-Data in the repo: `strava_export_27_10.zip` (full Strava export: activities.csv + 49 activity files to 26 Oct, routes/), `rides_runs_gpx_files_31_10.zip` (route GPX files).
-Newer rides: Strava connector for summaries; FIT / GPX uploaded in chat for tests and benchmarks (stream data from the connector cannot be piped into the sandbox).
+
+Data in the repo: the newest `strava_export_<dd_mm>.zip` (full Strava export: `activities.csv`, the activity files and `routes/`) and `all_routes_<dd_mm>.zip` (route GPX files). Optional test files: `tests/30_10.fit` (28 Oct 5K) and `tests/01_11.fit` (1 Nov 4DP).
+
+Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded in the chat or a newer export in the repo give block-level detail (stream data from the connector cannot be piped into the sandbox).
 
 ## Files
 | File | Purpose |
 |---|---|
-| `analysis_tools.py` | v2 CLI: one GPX / FIT / FIT.GZ activity -> ride report (elapsed-based and stops-excluded power curves up to 180 min, NP, zones, cadence, HR) or run report (splits, laps, HR at pace); `--batch` -> digest CSVs |
-| `routes_tool.py` | v2: GPX route geometry (distance, ascent, sharp turns with merge option, stretches and headings, moderate bends, loop closure, comparison, markdown entries) |
-| `cp_lib.py` | everything else: physics (power / speed / wind, CP sketches), sun times, FIT inspection (laps, pauses, HRV / strap quality), ride blocks / windows, run finish tools, CSV + digest generator, safe markdown patcher |
-| `selfcheck.py` | regression test (see above) |
-| `SCRIPT_CATALOGUE.md` | where the 88 commands of chats 1-4 went (ported / superseded / one-off) + gotchas |
+| `analysis_tools.py` | v2 CLI: one GPX / FIT / FIT.GZ activity → ride report (elapsed-based and stops-excluded power curves up to 180 min, NP, zones, cadence, HR) or run report (splits, laps, HR at pace); `--batch` → digest CSVs |
+| `routes_tool.py` | v2: GPX route geometry from komoot track exports (`<trkpt>`) and route exports (`<rtept>`): distance, ascent, sharp turns (with merge option), stretches and headings, moderate bends, loop closure, comparison, markdown entries |
+| `cp_lib.py` | Everything else: physics (power / speed / wind, CP sketches), sun times, FIT inspection (laps, pauses, HRV / strap quality), ride blocks and windows, run trial tools, 4DP report, CSV and digest generator, safe markdown patcher |
+| `selfcheck.py` | Regression test (see above); picks the newest data zips automatically |
+| `SCRIPT_CATALOGUE.md` | Where the commands of the chats went (ported / superseded / one-off) and the gotchas learned on the way |
 
-## Cookbook (task -> command; `import cp_lib as cp, routes_tool as rt`)
+## Cookbook (task → command; `import cp_lib as cp, routes_tool as rt`)
 - First look at any FIT: `cp.fit_inspect(f)`. Lap-button blocks, pauses, strap: `cp.fit_laps(f)`, `cp.fit_pauses(f)`, `cp.fit_events(f)`, `cp.hrv_quality(f)`.
 - Ride report: `python3 analysis_tools.py f.fit --ftp 175`; session view (blocks, best windows with HR and speed, decoupling, efforts): `cp.ride_session(f)`.
+- 4DP / Full Frontal: `cp.fourdp_report(f)` (sprints with a physics check, per-minute blocks, gaps with stopped time, strap quality, FTP by the 4DP rule).
 - Window / block detail: `a, ex, tl = cp.load_activity(f)`; `cp.best_window(tl, 1200, 'elapsed')`; `cp.ride_blocks(tl, 10)`.
 - Run trial: `cp.run_finish_report(f)`; reps: `rs = cp.run_series(f)`; `cp.fastest_windows(rs, 240, 3)`; `cp.split_table(rs, 500)`.
-- Routes: `python3 routes_tool.py DIR`; `--compare A B`; `--diag F`; `--entry F C21`; in Python `rt.analyse(f, merge_km=0.35)`, `rt.moderate_bends(f)`, `rt.loop_closure(f)`.
-- Wind and distance: `cp.distance_table(powers=(180, 185, 190), winds=(-10, 0, 10))`; `cp.implied_headwind(174, 27.2, 0.0056)`; `cp.cp_fit([(300, 213), (600, 202)])`.
+- Routes: `python3 routes_tool.py DIR`; `--compare A B`; `--diag F`; `--entry F C28`; in Python `rt.analyse(f, merge_km=0.35)`, `rt.stretches(r)`, `rt.moderate_bends(f)`, `rt.loop_closure(f)`.
+- Wind and distance: `cp.distance_table(powers=(180, 185, 190), winds=(-10, 0, 10))`; `cp.implied_headwind(174, 27.2, 0.0056)`; `cp.cp_fit([(300, 231), (1200, 184)])`.
 - Daylight: `cp.sun_times(datetime.date(2026, 11, 29))`.
-- Weekly digest refresh: `python3 analysis_tools.py --batch ACT_DIR --csv activities.csv --out digest`, then `cp.make_history_digest('digest/digest_rides.csv', 'digest/digest_runs.csv', 'history_digest.md', strava_now=cp.parse_bests('5s=544@2026-10-31, ...'), extra_monthly={'2026-10': {'5s': 544}}, asof='...')` (new bests go into the table, not into extra text).
+- Digest refresh: `python3 analysis_tools.py --batch ACT_DIR --csv activities.csv --out digest`, then `cp.make_history_digest('digest/digest_rides.csv', 'digest/digest_runs.csv', 'history_digest.md', strava_now=cp.parse_bests('5s=686@2026-11-01, ...'), extra_monthly={'2026-11': {'5s': 686}}, asof='...', after_archive_md=[...])`. New bests go into the tables, not into extra text.
 - Edit markdown safely: `p = cp.Patch('coach_notes.md'); p.rep(old, new, 'tag'); p.insert_after('- [stated] ...', new); p.save('out.md')` (refuses to save if any target is missing).
 
 ## Conventions
-- elapsed-based = Strava power-curve convention (stopped / paused seconds count as 0 W); rolling / moving = stopped seconds removed, coasting kept (Strava average-power convention).
-- Working FTP 175 W for planning; Strava and intervals.icu settings 157 W (left alone until a factually new high). 4DP Full Frontal: FTP = 100% of the 20-min average. Config in `cp_lib.CFG`.
-- Local time Europe/Berlin; activities.csv timestamps are UTC.
+- Elapsed-based = Strava power-curve convention (stopped or paused seconds count as 0 W); rolling / moving = stopped seconds removed, coasting kept (Strava average-power convention).
+- FTP settings in Strava and intervals.icu: 170 W (since 1 Nov); 4DP result 183-184 W; the planning FTP is set after the 60-min trainer test. 4DP Full Frontal: FTP = 100% of the 20-min average. Model and zone defaults live in `cp_lib.CFG`.
+- Local time Europe/Berlin; `activities.csv` timestamps are UTC.
 
-## Gotchas (details in SCRIPT_CATALOGUE.md)
-- Strava-made run FIT files: use the distance field, not speed. Garmin ride FITs have gaps where the timer paused. GPX run distance can over-read; trust Strava's best efforts.
-- HR-flag counter in analysis_tools is capped at 8 (uninformative for rides): use `hr_plateaus` / `hrv_quality`.
-- Turn counts depend on the definition: 100 m windows, 55 deg, merge radius 350 m = 17 on the 4DP loop, unmerged 19.
-- komoot GPX has no surface, crossing or lights data; komoot elevation is noisy (ascent +-10%).
-- Sandbox shell is `sh`: no `time` builtin, no process substitution (use `bash -c` or temp files).
+## Gotchas (details in `SCRIPT_CATALOGUE.md`)
+- Strava-made run FIT files: use the distance field, not speed. Garmin ride FITs have gaps where the timer paused. GPX run distance can over-read; trust Strava's best efforts for runs.
+- The HR-flag counter in `analysis_tools.py` is capped at 8 and uninformative for rides: use `cp.hr_plateaus` / `cp.hrv_quality`.
+- Turn counts depend on the definition: 100 m windows, 55°, merge radius 350 m gave 17 on the old 4DP loop, unmerged 19.
+- komoot GPX has no surface, crossing or traffic-light data; komoot elevation is noisy (ascent ±10%, occasional spikes: see `rt.elevation_diag`).
+- Trainer rides are a separate Strava sport (VirtualRide) with their own best efforts; trainer HR without a strong fan is inflated.
+- The sandbox shell is `sh`: no `time` builtin, no process substitution (use `bash -c` or temp files).
 
 ## When the toolkit changes
-Claude hands over the changed file(s) -> Pat commits -> run `python3 selfcheck.py`; every new function gets a test with a validated number. Keep this README short: it is loaded into every chat.
+Claude hands over the changed files, Pat commits them, then `python3 selfcheck.py` runs. Every new function gets a test against a validated number. Keep this README short: it is read in every chat.
 
-## cp_lib.py function index (generated by `python3 cp_lib.py --index-md`)
-**CONFIG**
-- `fmt_t`: Seconds -> m:ss text (e.g. 1410 -> 23:30)
-**PHYSICS**
-- `power_needed`: Pedal power (W) needed for ground speed v_kmh on a grade (fraction); wind_kmh > 0 = headwind
-- `speed_from_power`: Ground speed (km/h) for pedal power P (W)
-- `implied_headwind`: Headwind (km/h, negative = tailwind) that the model needs to explain speed v_kmh at power P
-- `effort_distance`: Distance (km) covered in `minutes` at constant power P: how long a corner-free stretch must be
-- `distance_table`: Table of effort distance by power (rows) and wind (columns, + = headwind km/h)
-- `cp_fit`: Two-parameter critical-power sketch from [(seconds, watts), ...] (>= 2 points; least squares of work ...
-- `cp_predict`: Power (W) the critical-power sketch predicts for an effort of `seconds` (CP + W'/t)
-**SUN**
-- `sun_times`: (sunrise, sunset) as 'HH:MM' local time for date d (NOAA approximation, DST-aware)
-**PATCH**
-- `Patch`: Safe edits of a text file
-**FIT**
-- `fit_inspect`: First look at a FIT file: producer/device, sport, session summary, record channels and counts, time ...
-- `fit_laps`: Lap table (lap button / auto laps): start (local), elapsed, timer, distance, power, HR, cadence, ...
-- `fit_events`: Timer events (start / stop_all with trigger auto|manual), markers, off-course notices
-- `fit_pauses`: Timer pauses: from each stop_all to the next start: offset into the file, duration, and what ...
-- `hrv_quality`: Beat-to-beat (RR) quality from the FIT 'hrv' messages (Garmin ride files; Strava-made files have none)
-**shared loading (uses analysis_tools.py)**
-- `load_activity`: Load a GPX / FIT / FIT.GZ activity
-**RIDE**
-- `ride_blocks`: Table of consecutive blocks of MOVING time (stops removed): avg W, NP, HR avg/max, pedalling cadence
-- `best_window`: Best mean-power window of dur_s seconds
-- `decoupling`: Aerobic decoupling over a power / HR series (same length, e.g. moving seconds): efficiency factor ...
-- `hr_by_power`: Mean HR and seconds per power band (default bands: <100, 100-135, 136-155, 156-180, >180 W)
-- `find_efforts`: Find hard efforts in a power series (1 Hz): start when 5-s mean >= start_w (default 1.2 x FTP), ...
-- `ride_session`: One-call post-ride summary of a ride file: totals, 10-min blocks, best windows (elapsed + moving) ...
-**RUN**
-- `run_series`: Distance-based series of a run: dict with t (s), dist (m, recorded distance if the file has it), mt ...
-- `split_table`: Splits every `step` metres (moving time): from_m, to_m, time_s, pace_s_km, hr_avg, hr_max
-- `halves`: First vs second part of a run (default: half distance): times, paces and how much faster the second ...
-- `tail_paces`: Time and pace over the last L metres of a run, for each L
-- `fastest_windows`: Fastest non-overlapping windows of window_s seconds (for interval runs / reps): start (moving min), ...
-- `hr_plateaus`: Runs of >= min_len identical consecutive HR readings (possible held values / strap trouble) and the ...
-- `hr_steps`: Sudden HR steps (mean of the next `win` s vs the previous `win` s differs by >= thr bpm, at most one ...
-- `hr_zone_time`: Share of valid HR seconds per zone
-- `loop_length`: Length (m) of the first lap of a loop course: first return within `tol` m of the start after min_m ...
-- `run_finish_report`: One-call summary for a trial / race run: km splits with HR, 500 m splits, halves, tail paces, HR zone ...
-**CSV / DIGEST**
-- `load_activities_csv`: Strava export activities.csv -> clean DataFrame (pandas renames the duplicate headers 'Elapsed ...
-- `csv_totals`: Counts, km and hours by activity type, and km by gear (use to cross-check against Strava: connector ...
-- `parse_bests`: '5s=544@2026-10-31, 15s=448@2026-10-30, 20min=175@2026-10-31' -> {'5s': (544.0, '2026-10-31'), ...} ...
-- `bests_table_md`: Markdown rows of the all-time bests table from the rides digest DataFrame (columns el_<dur>, ...
-- `monthly_bests_md`: Bests by month (elapsed-based) for 5s, 1min, 5min, 10min, 20min, 60min; extra={'2026-10': {'5s': ...
-- `weekly_table_md`: Weekly load/intensity rows from the rides digest: rides, km, moving h, TSS-like, Z1-2 / Z3 / Z4+ ...
-- `make_history_digest`: Write history_digest.md from digest_rides.csv / digest_runs.csv (made by `analysis_tools.py --batch`)
-**INDEX**
-- `index`: Print the function index of this module grouped by section (md=True: markdown for README.md)
+## `cp_lib.py` function index (generated by `python3 cp_lib.py --index-md`)
+
+### CONFIG
+- `fmt_t`: Seconds -> m:ss text (e.g. 1410 -> 23:30).
+
+### PHYSICS
+- `power_needed`: Pedal power (W) needed for ground speed v_kmh on a grade (fraction); wind_kmh > 0 = headwind.
+- `speed_from_power`: Ground speed (km/h) for pedal power P (W).
+- `implied_headwind`: Headwind (km/h, negative = tailwind) that the model needs to explain speed v_kmh at power P.
+- `effort_distance`: Distance (km) covered in `minutes` at constant power P: how long a corner-free stretch must be.
+- `distance_table`: Table of effort distance by power (rows) and wind (columns, + = headwind km/h).
+- `cp_fit`: Two-parameter critical-power sketch from [(seconds, watts), ...] (>= 2 points; least squares of work vs time).
+- `cp_predict`: Power (W) the critical-power sketch predicts for an effort of `seconds` (CP + W'/t).
+
+### SUN
+- `sun_times`: (sunrise, sunset) as 'HH:MM' local time for date d (NOAA approximation, DST-aware).
+
+### PATCH
+- `Patch`: Safe edits of a text file.
+
+### FIT
+- `fit_inspect`: First look at a FIT file: producer/device, sport, session summary, record channels and counts, time span, gaps, timer events, laps, HRV.
+- `fit_laps`: Lap table (lap button / auto laps): start (local), elapsed, timer, distance, power, HR, cadence, ascent, work, trigger.
+- `fit_events`: Timer events (start / stop_all with trigger auto|manual), markers, off-course notices.
+- `fit_pauses`: Timer pauses: from each stop_all to the next start: offset into the file, duration, and what triggered the stop (auto / manual).
+- `hrv_quality`: Beat-to-beat (RR) quality from the FIT 'hrv' messages (Garmin ride files; Strava-made files have none).
+
+### LOADING (uses `analysis_tools.py`)
+- `load_activity`: Load a GPX / FIT / FIT.GZ activity.
+
+### RIDE
+- `ride_blocks`: Table of consecutive blocks of MOVING time (stops removed): avg W, NP, HR avg/max, pedalling cadence.
+- `best_window`: Best mean-power window of dur_s seconds.
+- `decoupling`: Aerobic decoupling over a power / HR series (same length, e.g. moving seconds): efficiency factor (NP/HR) of the 1st vs 2nd half.
+- `hr_by_power`: Mean HR and seconds per power band (default bands: <100, 100-135, 136-155, 156-180, >180 W).
+- `find_efforts`: Find hard efforts in a power series (1 Hz): start when 5-s mean >= start_w (default 1.2 x FTP), continue while >= hold_w (default 0.97 x FTP), keep those >= min_len s.
+- `ride_session`: One-call post-ride summary of a ride file: totals, 10-min blocks, best windows (elapsed + moving) with HR/speed, decoupling, HR by power, efforts.
+
+### RUN
+- `run_series`: Distance-based series of a run: dict with t (s), dist (m, recorded distance if the file has it), mt (moving-time axis, pauses removed), hr, lat, lon.
+- `split_table`: Splits every `step` metres (moving time): from_m, to_m, time_s, pace_s_km, hr_avg, hr_max.
+- `halves`: First vs second part of a run (default: half distance): times, paces and how much faster the second part was (%, positive = negative split).
+- `tail_paces`: Time and pace over the last L metres of a run, for each L.
+- `fastest_windows`: Fastest non-overlapping windows of window_s seconds (for interval runs / reps): start (moving min), pace, distance, HR avg/max.
+- `hr_plateaus`: Runs of >= min_len identical consecutive HR readings (possible held values / strap trouble) and the count of NaN seconds.
+- `hr_steps`: Sudden HR steps (mean of the next `win` s vs the previous `win` s differs by >= thr bpm, at most one per minute).
+- `hr_zone_time`: Share of valid HR seconds per zone.
+- `loop_length`: Length (m) of the first lap of a loop course: first return within `tol` m of the start after min_m metres (None if none).
+- `run_finish_report`: One-call summary for a trial / race run: km splits with HR, 500 m splits, halves, tail paces, HR zone shares, HR plateaus, loop length.
+
+### TESTS
+- `top_windows`: Best `n` non-overlapping mean-power windows of `dur_s` seconds in p[lo:hi] (at least `sep_s` apart).
+- `sprint_energy_check`: Plausibility check of a sprint's power (seconds s..e of the timeline): meter energy vs the physics needed for the measured acceleration plus drag.
+- `fourdp_report`: Analyse a 4DP / Full Frontal file (two 5-s sprints, 5 min, 20 min, 1 min, in that order) without laps or manual input.
+
+### CSV / DIGEST
+- `load_activities_csv`: Strava export activities.csv -> clean DataFrame (pandas renames the duplicate headers 'Elapsed Time.1', 'Distance.1', 'Max Heart Rate.1', 'Relative Effort.1'; the .1 versions are the numeric ones in seconds / metres).
+- `csv_totals`: Counts, km and hours by activity type, and km by gear (use to cross-check against Strava: connector gear totals, profile counts).
+- `parse_bests`: Parse current Strava all-time bests typed in by hand, e.g. "5s=686@2026-11-01, 20min=184@2026-11-01", into {'5s': (686.0, '2026-11-01'), ...}.
+- `bests_table_md`: Markdown rows of the all-time bests table from the rides digest DataFrame (columns `el_<dur>`, `ro_<dur>`, date).
+- `monthly_bests_md`: Bests by month (elapsed-based) for 5s, 1min, 5min, 10min, 20min and 60min.
+- `weekly_table_md`: Weekly load/intensity rows from the rides digest: rides, km, moving h, TSS-like, Z1-2 / Z3 / Z4+ shares (Z4+ = >= 90% FTP).
+- `make_history_digest`: Write history_digest.md from digest_rides.csv / digest_runs.csv (made by `analysis_tools.py --batch`).
+
+### INDEX
+- `index`: Print the function index of this module grouped by section (md=True: markdown for README.md).
