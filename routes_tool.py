@@ -21,11 +21,14 @@ COMP = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW
 
 
 def parse(path):
-    """GPX -> (lat, lon, ele, name) arrays; accepts lat/lon in either attribute order."""
+    """GPX -> (lat, lon, ele, name) arrays; reads track points (<trkpt>) or route points (<rtept>), lat/lon in either order."""
     txt = open(path, encoding='utf-8').read()
-    pts = re.findall(r'<trkpt[^>]*lat="(-?[\d.]+)"[^>]*lon="(-?[\d.]+)"[^>]*>(.*?)</trkpt>', txt, re.S)
+    tag = 'trkpt' if '<trkpt' in txt else 'rtept'          # komoot track export (<trk>) or route export (<rte>, 'komootGPXport')
+    pts = re.findall(r'<%s[^>]*lat="(-?[\d.]+)"[^>]*lon="(-?[\d.]+)"[^>]*>(.*?)</%s>' % (tag, tag), txt, re.S)
     if not pts:   # lon before lat
-        pts = [(b, a, c) for a, b, c in re.findall(r'<trkpt[^>]*lon="(-?[\d.]+)"[^>]*lat="(-?[\d.]+)"[^>]*>(.*?)</trkpt>', txt, re.S)]
+        pts = [(b, a, c) for a, b, c in re.findall(r'<%s[^>]*lon="(-?[\d.]+)"[^>]*lat="(-?[\d.]+)"[^>]*>(.*?)</%s>' % (tag, tag), txt, re.S)]
+    if len(pts) < 2:
+        raise ValueError('%s: fewer than 2 track/route points found (no <trkpt> or <rtept> with lat/lon)' % path)
     la = np.array([float(p[0]) for p in pts]); lo = np.array([float(p[1]) for p in pts])
     el = np.array([float((re.search(r'<ele>(-?[\d.]+)</ele>', p[2]) or [0, 'nan'])[1]) if re.search(r'<ele>', p[2]) else np.nan for p in pts])
     name = (re.search(r'<name>(.*?)</name>', txt, re.S) or [None, ''])[1].strip()
