@@ -2,9 +2,10 @@
 """selfcheck.py - regression test of the coaching toolkit (analysis_tools.py, routes_tool.py, cp_lib.py).
 
 Run in a fresh chat after cloning the repo:   pip install fitparse scipy pandas --break-system-packages ; python3 selfcheck.py
-It reproduces numbers that were validated against Strava / the first chats (20 Sep ride, 22 Sep hour, 4DP loop geometry, C19 loop, 5K trial ...),
+It reproduces numbers that were validated against Strava / the chats (20 Sep ride, 22 Sep hour, route geometry, C19 loop, 5K trial, 4DP ...),
 so a silent bug introduced by a script change shows up as FAIL. SKIP = the needed data file is not in the repo.
-Data: strava_export_27_10.zip and rides_runs_gpx_files_31_10.zip in the repo folder (or in data/); optional 5K FIT: 5k_28oct.fit or 30_10.fit (repo folder, data/ or tests/).
+Data (repo folder, data/ or tests/): the newest strava_export_<dd_mm>.zip, every all_routes_*.zip / rides_runs_gpx_files_*.zip (zips can be
+replaced by newer ones with the same name pattern); optional: tests/30_10.fit (28 Oct 5K) and tests/01_11.fit (1 Nov 4DP).
 """
 import os, sys, glob, zipfile, tempfile, traceback
 from datetime import date
@@ -13,12 +14,25 @@ import numpy as np
 RES = []
 
 
+BASES = (HERE, os.path.join(HERE, "data"), os.path.join(HERE, "tests"))
+
+
 def find(*names):
-    for base in (HERE, os.path.join(HERE, "data"), os.path.join(HERE, "tests")):
+    for base in BASES:
         for n in names:
             p = os.path.join(base, n)
             if os.path.exists(p): return p
     return None
+
+
+def find_all(pattern):
+    """All files matching a glob pattern in the repo folder, data/ and tests/, newest first (by the dd_mm date in the name, else file time)."""
+    import re
+    out = [p for b in BASES for p in glob.glob(os.path.join(b, pattern))]
+    def key(p):
+        m = re.search(r"_(\d\d)_(\d\d)\.zip$", p)
+        return (int(m.group(2)), int(m.group(1))) if m else (0, 0)
+    return sorted(out, key=lambda p: (key(p), os.path.getmtime(p)), reverse=True)
 
 
 def check(name, ok, detail=""):
@@ -62,16 +76,17 @@ def main():
     guarded(patch)
 
     # ---- data-based tests
-    exp = find("strava_export_27_10.zip"); gz = find("rides_runs_gpx_files_31_10.zip")
+    exports = find_all("strava_export_*.zip"); exp = exports[0] if exports else None
     act_dir = csv = None
     if exp:
         zipfile.ZipFile(exp).extractall(os.path.join(tmp, "exp")); act_dir = os.path.join(tmp, "exp"); csv = os.path.join(act_dir, "activities.csv")
+        print("using %s" % os.path.basename(exp))
 
     def csv_loader():
-        df = cp.load_activities_csv(csv); t = cp.csv_totals(df)
-        check("activities.csv: 43 rides / 1259.4 km, 6 runs / 33.0 km", len(df) == 49 and t["Ride"]["n"] == 43 and abs(t["Ride"]["km"] - 1259.4) < 0.2 and t["Run"]["n"] == 6 and abs(t["Run"]["km"] - 33.0) < 0.2, str({k: v for k, v in t.items() if k != "gear_km"}))
+        df = cp.load_activities_csv(csv); old = df[df["date"] <= "2026-10-26"]; t = cp.csv_totals(old)
+        check("activities.csv to 26 Oct: 43 rides / 1259.4 km, 6 runs / 33.0 km", len(old) == 49 and t["Ride"]["n"] == 43 and abs(t["Ride"]["km"] - 1259.4) < 0.2 and t["Run"]["n"] == 6 and abs(t["Run"]["km"] - 33.0) < 0.2, "%d activities in the export, %d to 26 Oct" % (len(df), len(old)))
     if csv: guarded(csv_loader)
-    else: skip("activities.csv loader", "strava_export_27_10.zip not found")
+    else: skip("activities.csv loader", "no strava_export_*.zip found")
 
     def ride(datestr):
         df = cp.load_activities_csv(csv); row = df[df["date"] == datestr].iloc[0]
@@ -92,18 +107,38 @@ def main():
         check("hrv_quality: returns windows and a sane artefact rate", len(df) > 50 and 0 <= s["artefact_pct"] < 15, str(s))
         check("fit_laps / fit_pauses: tables", len(cp.fit_laps(f20)) >= 1 and len(cp.fit_pauses(f20)) >= 0)
     if csv: guarded(rides)
-    else: skip("ride tests (20/22/19 Sep)", "strava_export_27_10.zip not found")
+    else: skip("ride tests (20/22/19 Sep)", "no strava_export_*.zip found")
+
+    route_zips = find_all("all_routes_*.zip") + find_all("rides_runs_gpx_files_*.zip")
+    for k, z in enumerate(route_zips):
+        zipfile.ZipFile(z).extractall(os.path.join(tmp, "gpx", str(k)))
+
+    def g(pat):
+        hits = glob.glob(os.path.join(tmp, "gpx", "**", pat), recursive=True)
+        return hits[0] if hits else None
 
     def routes():
-        if not gz: return skip("route tests", "rides_runs_gpx_files_31_10.zip not found")
-        zipfile.ZipFile(gz).extractall(os.path.join(tmp, "gpx")); g = lambda pat: glob.glob(os.path.join(tmp, "gpx", "**", pat), recursive=True)[0]
-        v1 = g("*3316196558*"); r0 = rt.analyse(v1); r1 = rt.analyse(v1, merge_km=0.35)
-        check("4dp v1: 19 raw / 17 merged turns, longest straight 10.1 km", len(r0["turns"]) == 19 and len(r1["turns"]) == 17 and abs(r0["longest_km"] - 10.1) < 0.2, "%d / %d / %.1f km" % (len(r0["turns"]), len(r1["turns"]), r0["longest_km"]))
-        check("4dp v1: ascent / descent +152 / -162 m (edge-padded smoothing)", abs(r0["asc"] - 152) < 6 and abs(r0["dsc"] - 162) < 6, "+%.0f / -%.0f" % (r0["asc"], r0["dsc"]))
-        lc = rt.loop_closure(g("*uninterrupted loop*"))
-        check("C19: loop joins at km 5.3, 16.4 km, +23/-21 m", lc.get("closed") and abs(lc["join_km"] - 5.3) < 0.2 and abs(lc["loop_km"] - 16.4) < 0.2 and abs(lc["loop_asc"] - 23) < 3, str({k: (round(float(v), 1) if not isinstance(v, (bool, tuple)) else v) for k, v in lc.items()}))
-        st = rt.stretches(r0, 2.5)
-        check("4dp v1: 8.9 km south stretch (km 25.1-34.0, 179 deg)", any(abs(x["L"] - 8.9) < 0.3 and abs(x["hd"] - 179) < 4 for x in st))
+        if not route_zips: return skip("route tests", "no all_routes_*.zip / rides_runs_gpx_files_*.zip found")
+        c2 = g("*15km uninterrupted - komoot*")
+        if c2:
+            r = rt.analyse(c2); st = rt.stretches(r, by_length=True)
+            check("C2 (komoot track export): 1 sharp turn, 11.7 km straight at about 172 deg", len(r["turns"]) == 1 and abs(st[0]["L"] - 11.7) < 0.2 and abs(st[0]["hd"] - 172) < 4, "%d turn(s), %.1f km at %.0f deg" % (len(r["turns"]), st[0]["L"], st[0]["hd"]))
+        else: skip("C2 geometry", "15km uninterrupted GPX not found")
+        c21 = g("20km uninterrupted*")
+        if c21:
+            r = rt.analyse(c21); st = rt.stretches(r, by_length=True)
+            check("C21 (komoot route export, <rtept>): 20.0 km, 2 turns, 17.7 km straight SE", abs(r["km"] - 20.0) < 0.2 and len(r["turns"]) == 2 and abs(st[0]["L"] - 17.7) < 0.2 and abs(st[0]["hd"] - 133) < 4, "%.1f km, %d turns, %.1f km at %.0f deg" % (r["km"], len(r["turns"]), st[0]["L"], st[0]["hd"]))
+        else: skip("C21 geometry (route export)", "20km uninterrupted GPX not found")
+        c19 = g("*uninterrupted loop*")
+        if c19:
+            lc = rt.loop_closure(c19)
+            check("C19: loop joins at km 5.3, 16.4 km, +23/-21 m", lc.get("closed") and abs(lc["join_km"] - 5.3) < 0.2 and abs(lc["loop_km"] - 16.4) < 0.2 and abs(lc["loop_asc"] - 23) < 3, "join km %.1f, loop %.1f km, +%.0f m" % (lc.get("join_km", 0), lc.get("loop_km", 0), lc.get("loop_asc", 0)))
+        else: skip("C19 loop closure", "uninterrupted loop GPX not found")
+        v1 = g("*3316196558*")
+        if v1:
+            r0 = rt.analyse(v1); r1 = rt.analyse(v1, merge_km=0.35)
+            check("old 4dp v1: 19 raw / 17 merged turns, +152/-162 m", len(r0["turns"]) == 19 and len(r1["turns"]) == 17 and abs(r0["asc"] - 152) < 6 and abs(r0["dsc"] - 162) < 6, "%d / %d turns, +%.0f/-%.0f" % (len(r0["turns"]), len(r1["turns"]), r0["asc"], r0["dsc"]))
+        else: skip("old 4dp v1 (merge rule, smoothing)", "v1 GPX no longer in the repo (optional)")
     guarded(routes)
 
     def run5k():
@@ -114,6 +149,15 @@ def main():
         check("5K 28 Oct: second half 11.6-11.8% faster", 11.3 < r["halves"]["faster_pct"] < 12.0, "%.1f%%" % r["halves"]["faster_pct"])
         check("5K 28 Oct: HR zones 17% / 68% / 16% (run zones)", abs(r["zones"][2] - 0.17) < 0.02 and abs(r["zones"][3] - 0.68) < 0.02 and abs(r["zones"][4] - 0.16) < 0.02, str([round(x, 2) for x in r["zones"]]))
     guarded(run5k)
+
+    def fourdp():
+        f = find("01_11.fit", "4dp_01_11.fit")
+        if not f: return skip("4DP report (1 Nov)", "tests/01_11.fit not in the repo (optional)")
+        r = cp.fourdp_report(f, show=False); b = r["blocks"]; sp = r["sprints"]
+        check("4DP 1 Nov: 5 min 230.8 W, 20 min 183.9 W, 1 min 312.0 W (best windows)", abs(b["5min"]["avg_w"] - 230.8) < 0.5 and abs(b["20min"]["avg_w"] - 183.9) < 0.5 and abs(b["1min"]["avg_w"] - 312.0) < 0.5, "%.1f / %.1f / %.1f W" % (b["5min"]["avg_w"], b["20min"]["avg_w"], b["1min"]["avg_w"]))
+        check("4DP 1 Nov: sprints 672 / 686 W, meter consistent with physics", len(sp) == 2 and abs(sp[0]["best5s_w"] - 672) < 2 and abs(sp[1]["best5s_w"] - 686) < 2 and all(0.8 < x["energy"]["ratio"] < 1.25 for x in sp), str([(round(x["best5s_w"]), round(float(x["energy"]["ratio"]), 2)) for x in sp]))
+        check("4DP 1 Nov: gap before the 20 min includes a 3:13 stop", abs(r["gaps"]["5min->20min"]["stopped_s"] - 193) <= 3, "%d s stopped" % r["gaps"]["5min->20min"]["stopped_s"])
+    guarded(fourdp)
 
     n = {k: sum(1 for x in RES if x[0] == k) for k in ("PASS", "FAIL", "SKIP")}
     print("\nSUMMARY: %(PASS)d passed, %(FAIL)d failed, %(SKIP)d skipped" % n)
