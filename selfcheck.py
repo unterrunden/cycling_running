@@ -5,7 +5,7 @@ Run in a fresh chat after cloning the repo:   pip install fitparse scipy pandas 
 It reproduces numbers that were validated against Strava / the chats (20 Sep ride, 22 Sep hour, route geometry, C19 loop, 5K trial, 4DP ...),
 so a silent bug introduced by a script change shows up as FAIL. SKIP = the needed data file is not in the repo.
 Data (repo folder, data/ or tests/): the newest strava_export_<dd_mm>.zip, every all_routes_*.zip / rides_runs_gpx_files_*.zip (zips can be
-replaced by newer ones with the same name pattern); optional: tests/30_10.fit (28 Oct 5K) and tests/01_11.fit (1 Nov 4DP).
+replaced by newer ones with the same name pattern); optional: tests/28_10.fit (28 Oct 5K) and tests/01_11.fit (1 Nov 4DP).
 """
 import os, sys, glob, zipfile, tempfile, traceback
 from datetime import date
@@ -142,8 +142,8 @@ def main():
     guarded(routes)
 
     def run5k():
-        f = find("5k_28oct.fit", "30_10.fit")
-        if not f: return skip("5K trial tests", "5k_28oct.fit / 30_10.fit not in the repo (optional)")
+        f = find("28_10.fit", "5k_28oct.fit", "30_10.fit")
+        if not f: return skip("5K trial tests", "tests/28_10.fit not in the repo (optional)")
         r = cp.run_finish_report(f, show=False); sp = [round(s["time_s"] * 1000 / (s["to_m"] - s["from_m"])) for s in r["splits"]]
         check("5K 28 Oct: km splits 5:04 4:57 4:51 4:35 4:03", all(abs(x - y) <= 1 for x, y in zip(sp, [304, 297, 291, 275, 243])), str([cp.fmt_t(x) for x in sp]))
         check("5K 28 Oct: second half 11.6-11.8% faster", 11.3 < r["halves"]["faster_pct"] < 12.0, "%.1f%%" % r["halves"]["faster_pct"])
