@@ -11,7 +11,7 @@ pip install fitparse scipy pandas --break-system-packages -q
 python3 selfcheck.py        # about 20 checks (about 30 s): every PASS = the toolkit still reproduces the validated numbers
 ```
 
-Data in the repo: the newest `strava_export_<dd_mm>.zip` (full Strava export: `activities.csv`, the activity files and `routes/`) and `all_routes_<dd_mm>.zip` (route GPX files). Optional test files: `tests/30_10.fit` (28 Oct 5K) and `tests/01_11.fit` (1 Nov 4DP).
+Data in the repo: the newest `strava_export_<dd_mm>.zip` (full Strava export: `activities.csv`, the activity files and `routes/`) and `all_routes_<dd_mm>.zip` (route GPX files). Optional test files: `tests/28_10.fit` (28 Oct 5K) and `tests/01_11.fit` (1 Nov 4DP).
 
 Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded in the chat or a newer export in the repo give block-level detail (stream data from the connector cannot be piped into the sandbox).
 
