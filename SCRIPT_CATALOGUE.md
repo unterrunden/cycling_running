@@ -105,6 +105,12 @@ Counts: PORTED 29, SUPERSEDED 4, PATTERN 6, ONE-OFF 19, HOUSEKEEPING 26, DUPLICA
 - Digest: `cp_lib.make_history_digest` gained post-archive month rows and an "after the archive" section; `cp_lib.index` prints full first sentences.
 - `selfcheck.py` picks the newest `strava_export_*.zip` / `all_routes_*.zip` and has optional 5K and 4DP tests.
 
+## 6 Nov (chat 2)
+- Segments → `segments_tool.py` v1 + `segments.json`: PR fingerprint search (exact elapsed time, distance, W, cadence, HR avg/max), reference lines, effort finder (start/end within 40 m, course within 40 m, direction check, latest start crossing), archive and markdown. Validated against Strava's efforts of 27 Sep (0-3 s, about 1 W). The two PRs without power were placed by elevation and effort count, one confirmed by Strava's segment list of 20 Aug.
+- KICKR vs Stages → `cp_lib.fit_series`, `cp_lib.stream_series`, `cp_lib.meter_offset` (HR cross-correlation alignment, power bands, linear fit); test files `tests/06_11_stages_series.json` + `tests/06_11_kickr_streams.json` (no GPS: the trainer file would show Pat's home).
+- Climb physics check of the Stages (meter energy vs m·g·h + drag + kinetic energy on segment efforts): ad hoc, results in `segments.md` (candidate for a later helper).
+- `cp_lib.hrv_quality`: junk RR values > 3 s are left out of the time axis (the 6 Nov file spread a 38-min ride over 220 "minutes").
+
 ## Gotchas learned along the way (all handled in the library)
 - `np.convolve(..., mode='same')` pads the edges with zeros: fake climbs at every route start (fixed with edge padding).
 - Strava-made run FIT files: the speed field is unreliable (smoothed phone speed); use the distance field. Garmin ride FITs have gaps where the timer was paused.
@@ -115,4 +121,7 @@ Counts: PORTED 29, SUPERSEDED 4, PATTERN 6, ONE-OFF 19, HOUSEKEEPING 26, DUPLICA
 - komoot exports come as tracks (`<trkpt>`) or routes (`<rtept>`, "komootGPXport"); both are read now.
 - The sprint power check needs a lag-corrected window: the speed sensor trails power by 1-2 s.
 - Shell quirks of the sandbox: `/bin/sh` has no `time` builtin and no process substitution; use `bash -c` or temp files.
-- Stream data from the Strava connector cannot be piped into the sandbox: block-level analysis needs the FIT file.
+- Stream data from the Strava connector cannot be piped into the sandbox: block-level analysis needs the FIT file; a short reduced-resolution stream can be copied into JSON by hand.
+- MyWhoosh start_local can be off by tens of seconds (51 s on 6 Nov): align two recordings by HR, never by the stated start.
+- Edge 540 indoors with GPS on: a GPS scribble, 0.13 km and 6 min "moving time" in Strava; Strava's moving time for that file is meaningless.
+- Strava segment elevations (low/high) come from other devices and can be offset by 35-70 m; elevation differences agree with the Edge within about 3 m.
