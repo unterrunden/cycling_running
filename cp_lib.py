@@ -229,8 +229,8 @@ def fit_pauses(path):
 def hrv_quality(path, win_s=60, tol=0.25, flag_pct=5.0):
     """Beat-to-beat (RR) quality from the FIT 'hrv' messages (Garmin ride files; Strava-made files have none).
     A beat is an artefact if it deviates more than `tol` from the median of its 7 neighbours (or is outside 0.3-2.0 s).
-    Returns (DataFrame per window: start_min, beats, artefact_pct, hr_from_rr, flag), summary dict). RR time runs on cumulative RR, so it
-    can drift a little against the record timeline. A loosening strap shows up as rising artefact_pct / missing beats."""
+    Returns (DataFrame per window: start_min, beats, artefact_pct, hr_from_rr, flag), summary dict). RR time runs on cumulative RR (values > 3 s are junk and
+    left out of the time axis), so it can drift a little against the record timeline. A loosening strap shows up as rising artefact_pct / missing beats."""
     import pandas as pd
     rr = []
     for m in _fitfile(path).get_messages("hrv"):
@@ -239,7 +239,7 @@ def hrv_quality(path, win_s=60, tol=0.25, flag_pct=5.0):
     if len(rr) < 20: return pd.DataFrame(), {"beats": int(len(rr))}
     med = np.array([np.median(rr[max(0, i - 3):i + 4]) for i in range(len(rr))])
     bad = (np.abs(rr - med) > tol * med) | (rr < 0.3) | (rr > 2.0)
-    tt = np.cumsum(rr); rows = []
+    tt = np.cumsum(np.where(rr > 3.0, 0.0, rr)); rows = []          # junk values (Edge 540 files hold some of 6-58 s) must not stretch time
     for k in range(int(tt[-1] // win_s) + 1):
         m = (tt >= k * win_s) & (tt < (k + 1) * win_s)
         if m.sum() == 0: continue
@@ -512,6 +512,53 @@ def _gap(tl, s, e):
     P = np.nan_to_num(tl["P"][s:e]); rec = tl["rec"][s:e]
     return dict(start_s=int(s), end_s=int(e), seconds=int(e - s), stopped_s=int((~rec).sum()), avg_w_recorded=float(P[rec].mean()) if rec.any() else 0.0,
                 s_150_200w=int((rec & (P >= 150) & (P < 200)).sum()), s_over_200w=int((rec & (P >= 200)).sum()))
+
+
+def fit_series(path):
+    """FIT -> dict(t=epoch seconds, p, hr, cad) of the record messages, for meter_offset()."""
+    rows = [(m.get_value("timestamp"), m.get_value("power"), m.get_value("heart_rate"), m.get_value("cadence")) for m in _fitfile(path).get_messages("record")]
+    rows = [r for r in rows if r[0] is not None]
+    t = np.array([r[0].replace(tzinfo=timezone.utc).timestamp() for r in rows])
+    f = lambda k: np.array([np.nan if r[k] is None else float(r[k]) for r in rows])
+    return dict(t=t, p=f(1), hr=f(2), cad=f(3))
+
+
+def stream_series(streams, start_local, tz=None):
+    """Strava connector streams (dict with time, watts, heart_rate; any resolution) + the activity's start_local ('2026-11-06T15:51:40') ->
+    dict(t=epoch seconds, p, hr). Copy a reduced-resolution stream (resolution <= ~300) into a JSON file to use it in the sandbox."""
+    import pandas as pd
+    t0 = pd.Timestamp(start_local).tz_localize(tz or CFG["tz"]).timestamp()
+    return dict(t=t0 + np.asarray(streams["time"], float), p=np.asarray(streams.get("watts", []), float), hr=np.asarray(streams.get("heart_rate", []), float))
+
+
+def meter_offset(ref, other, max_lag=180, steady_sd=15.0, bands=(60, 100, 120, 150, 200, 400), show=True):
+    """Compare two power meters recorded at the same time (e.g. ref = Edge/Stages FIT, other = KICKR via MyWhoosh FIT or stream).
+    Both are dicts from fit_series() / stream_series(). Aligns `other` by the HR cross-correlation (same strap; fallback power) within
+    +-max_lag s, then compares each `other` sample with the ref 5-s mean around it. Steady samples = ref 9-s SD < steady_sd W.
+    Returns dict(lag_s, r_hr, n, ratio, fit=(a, b) for other = a*ref + b on steady samples, bands=[(lo, hi, n, other, ref, diff, ratio)]).
+    6 Nov: KICKR = 0.97 x Stages + 13 W (+8 to +11 W, ratio 1.04 at 190 W, 1.11 at 100 W); MyWhoosh's start time was 51 s off on one file."""
+    t0 = int(np.floor(np.nanmin(ref["t"]))); n = int(np.ceil(np.nanmax(ref["t"]))) - t0 + 1
+    P = np.full(n, np.nan); H = np.full(n, np.nan); k = (np.asarray(ref["t"]) - t0).astype(int)
+    P[k] = ref["p"]; H[k] = ref["hr"]; P = np.nan_to_num(P)
+    ot = np.asarray(other["t"]); op = np.asarray(other["p"], float); oh = np.asarray(other["hr"], float) if len(other.get("hr", [])) else np.full(len(ot), np.nan)
+    def corr(lag, which):
+        idx = np.round(ot + lag - t0).astype(int); ok = (idx >= 0) & (idx < n)
+        a = oh[ok] if which == "hr" else op[ok]; b = H[idx[ok]] if which == "hr" else P[idx[ok]]; m = np.isfinite(a) & np.isfinite(b) & (a > 0) & (b > 0)
+        return np.corrcoef(a[m], b[m])[0, 1] if m.sum() > 20 else -1
+    which = "hr" if np.isfinite(oh).sum() > 20 and np.isfinite(H).sum() > 20 else "p"
+    lags = np.arange(-max_lag, max_lag + 1); cs = np.array([corr(l, which) for l in lags]); lag = int(lags[np.argmax(cs)])
+    idx = np.round(ot + lag - t0).astype(int); ok = (idx >= 4) & (idx < n - 4) & (op > 0)
+    o = op[ok]; i = idx[ok]; r5 = np.array([P[x - 2:x + 3].mean() for x in i]); sd = np.array([P[x - 4:x + 5].std() for x in i]); st = sd < steady_sd
+    rows = []
+    for lo, hi in zip(bands[:-1], bands[1:]):
+        m = st & (r5 >= lo) & (r5 < hi)
+        if m.sum(): rows.append((lo, hi, int(m.sum()), float(o[m].mean()), float(r5[m].mean()), float(o[m].mean() - r5[m].mean()), float(o[m].mean() / r5[m].mean())))
+    fit = tuple(np.linalg.lstsq(np.vstack([r5[st], np.ones(st.sum())]).T, o[st], rcond=None)[0]) if st.sum() > 10 else (np.nan, np.nan)
+    res = dict(lag_s=lag, r_hr=float(cs.max()) if which == "hr" else np.nan, n=int(ok.sum()), ratio=float(o.mean() / r5.mean()), fit=fit, bands=rows)
+    if show:
+        print("lag %+d s (%s r %.3f), %d samples, overall ratio %.3f, steady fit other = %.3f x ref %+.1f W" % (lag, which, cs.max(), res["n"], res["ratio"], fit[0], fit[1]))
+        for b in rows: print("  ref %3d-%3d W  n %3d  other %.1f  ref %.1f  diff %+.1f W  ratio %.3f" % b)
+    return res
 
 
 def fourdp_report(path, show=True):
