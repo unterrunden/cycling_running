@@ -8,12 +8,12 @@ The repo is public and the sandbox can clone it. Claude cannot push to GitHub: n
 ```sh
 git clone --depth 1 https://github.com/unterrunden/cycling_running repo && cd repo
 pip install fitparse scipy pandas --break-system-packages -q
-python3 selfcheck.py        # about 20 checks (about 30 s): every PASS = the toolkit still reproduces the validated numbers
+python3 selfcheck.py        # about 26 checks (about 1 min): every PASS = the toolkit still reproduces the validated numbers
 ```
 
-Data in the repo: the newest `strava_export_<dd_mm>.zip` (full Strava export: `activities.csv`, the activity files and `routes/`) and `all_routes_<dd_mm>.zip` (route GPX files). Optional test files: `tests/28_10.fit` (28 Oct 5K) and `tests/01_11.fit` (1 Nov 4DP).
+Data in the repo: the newest `strava_export_<dd_mm>.zip` (full Strava export: `activities.csv`, the activity files and `routes/`) and `all_routes_<dd_mm>.zip` (route GPX files). Segments: `segments.json` (definitions + reference lines) and `segments_archive.csv` (every effort, rebuilt by `segments_tool.py`). Optional test files: `tests/28_10.fit` (28 Oct 5K), `tests/01_11.fit` (1 Nov 4DP), `tests/06_11_stages_series.json` + `tests/06_11_kickr_streams.json` (6 Nov KICKR vs Stages, no GPS).
 
-Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded in the chat or a newer export in the repo give block-level detail (stream data from the connector cannot be piped into the sandbox).
+Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded in the chat or a newer export in the repo give block-level detail. Connector streams cannot be piped into the sandbox; a reduced-resolution stream (resolution <= ~300) can be copied into a JSON file by hand (`cp.stream_series`).
 
 ## Files
 | File | Purpose |
@@ -21,6 +21,8 @@ Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded
 | `analysis_tools.py` | v2 CLI: one GPX / FIT / FIT.GZ activity → ride report (elapsed-based and stops-excluded power curves up to 180 min, NP, zones, cadence, HR) or run report (splits, laps, HR at pace); `--batch` → digest CSVs |
 | `routes_tool.py` | v2: GPX route geometry from komoot track exports (`<trkpt>`) and route exports (`<rtept>`): distance, ascent, sharp turns (with merge option), stretches and headings, moderate bends, loop closure, comparison, markdown entries |
 | `cp_lib.py` | Everything else: physics (power / speed / wind, CP sketches), sun times, FIT inspection (laps, pauses, HRV / strap quality), ride blocks and windows, run trial tools, 4DP report, CSV and digest generator, safe markdown patcher |
+| `segments_tool.py` | v1: Strava segments without a segment API: fingerprint a PR effort in the ride files, reference lines, every effort of every segment (time, W, cadence, HR, stops) → `segments_archive.csv` and the tables of the `segments.md` Project doc |
+| `segments.json` | Segment definitions (Pat's Strava values, status attempted / todo) and 25-point reference lines |
 | `selfcheck.py` | Regression test (see above); picks the newest data zips automatically |
 | `SCRIPT_CATALOGUE.md` | Where the commands of the chats went (ported / superseded / one-off) and the gotchas learned on the way |
 
@@ -34,12 +36,15 @@ Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded
 - Wind and distance: `cp.distance_table(powers=(180, 185, 190), winds=(-10, 0, 10))`; `cp.implied_headwind(174, 27.2, 0.0056)`; `cp.cp_fit([(300, 231), (1200, 184)])`.
 - Daylight: `cp.sun_times(datetime.date(2026, 11, 29))`.
 - Digest refresh: `python3 analysis_tools.py --batch ACT_DIR --csv activities.csv --out digest`, then `cp.make_history_digest('digest/digest_rides.csv', 'digest/digest_runs.csv', 'history_digest.md', strava_now=cp.parse_bests('5s=686@2026-11-01, ...'), extra_monthly={'2026-11': {'5s': 686}}, asof='...', after_archive_md=[...])`. New bests go into the tables, not into extra text.
+- Segments: `python3 segments_tool.py` (newest export + tests/*.fit → `segments_archive.csv` + markdown); new segment: `acts = st.load_rides(); st.fingerprint(acts, km=1.56, time_s=221, w=248, cad=88, hr=183, hrmax=189)`, then `st.add_segment(...)`, `st.save_segments(data)` (`import segments_tool as st`).
+- Two power meters at once (KICKR vs Stages): `cp.meter_offset(cp.fit_series(edge_fit), cp.fit_series(kickr_fit))` (aligns by HR, power-band table, linear fit); a stream instead of a FIT: `cp.stream_series(streams, '2026-11-06T15:51:40')`.
 - Edit markdown safely: `p = cp.Patch('coach_notes.md'); p.rep(old, new, 'tag'); p.insert_after('- [stated] ...', new); p.save('out.md')` (refuses to save if any target is missing).
 
 ## Conventions
 - Elapsed-based = Strava power-curve convention (stopped or paused seconds count as 0 W); rolling / moving = stopped seconds removed, coasting kept (Strava average-power convention).
 - FTP settings in Strava and intervals.icu: 170 W (since 1 Nov); 4DP result 183-184 W; the planning FTP is set after the 60-min trainer test. 4DP Full Frontal: FTP = 100% of the 20-min average. Model and zone defaults live in `cp_lib.CFG`.
 - Local time Europe/Berlin; `activities.csv` timestamps are UTC.
+- Power scales: outdoor = Stages (left-only), indoor = KICKR; on 6 Nov KICKR ≈ Stages + 8-10 W (ratio about 1.04-1.06 at 180-190 W, 1.10 at 100 W). Keep the two apart.
 
 ## Gotchas (details in `SCRIPT_CATALOGUE.md`)
 - Strava-made run FIT files: use the distance field, not speed. Garmin ride FITs have gaps where the timer paused. GPX run distance can over-read; trust Strava's best efforts for runs.
@@ -47,6 +52,7 @@ Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded
 - Turn counts depend on the definition: 100 m windows, 55°, merge radius 350 m gave 17 on the old 4DP loop, unmerged 19.
 - komoot GPX has no surface, crossing or traffic-light data; komoot elevation is noisy (ascent ±10%, occasional spikes: see `rt.elevation_diag`).
 - Trainer rides are a separate Strava sport (VirtualRide) with their own best efforts; trainer HR without a strong fan is inflated.
+- MyWhoosh start times can be off (51 s on 6 Nov): align by HR (`cp.meter_offset`). Edge 540 HRV messages hold some junk RR values (6-58 s), now ignored. An Edge recording indoors with GPS on draws a scribble and uploads a 0.1 km outdoor "Ride" to Strava: use an indoor profile and delete the duplicate.
 - The sandbox shell is `sh`: no `time` builtin, no process substitution (use `bash -c` or temp files).
 
 ## When the toolkit changes
@@ -105,6 +111,9 @@ Claude hands over the changed files, Pat commits them, then `python3 selfcheck.p
 ### TESTS
 - `top_windows`: Best `n` non-overlapping mean-power windows of `dur_s` seconds in p[lo:hi] (at least `sep_s` apart).
 - `sprint_energy_check`: Plausibility check of a sprint's power (seconds s..e of the timeline): meter energy vs the physics needed for the measured acceleration plus drag.
+- `fit_series`: FIT -> dict(t=epoch seconds, p, hr, cad) of the record messages, for meter_offset().
+- `stream_series`: Strava connector streams (dict with time, watts, heart_rate; any resolution) + the activity's start_local ('2026-11-06T15:51:40') -> dict(t=epoch seconds, p, hr).
+- `meter_offset`: Compare two power meters recorded at the same time (e.g. ref = Edge/Stages FIT, other = KICKR via MyWhoosh FIT or stream).
 - `fourdp_report`: Analyse a 4DP / Full Frontal file (two 5-s sprints, 5 min, 20 min, 1 min, in that order) without laps or manual input.
 
 ### CSV / DIGEST
