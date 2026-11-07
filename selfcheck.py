@@ -159,6 +159,32 @@ def main():
         check("4DP 1 Nov: gap before the 20 min includes a 3:13 stop", abs(r["gaps"]["5min->20min"]["stopped_s"] - 193) <= 3, "%d s stopped" % r["gaps"]["5min->20min"]["stopped_s"])
     guarded(fourdp)
 
+    def meters():
+        f = find("06_11_stages_series.json"); j = find("06_11_kickr_streams.json")
+        if not (f and j): return skip("KICKR vs Stages (6 Nov)", "tests/06_11_stages_series.json or tests/06_11_kickr_streams.json not in the repo (optional)")
+        import json
+        s = json.load(open(f)); ref = {k: np.array([np.nan if v is None else v for v in s[k]], float) for k in ("t", "p", "hr", "cad")}; d = json.load(open(j))
+        r1 = cp.meter_offset(ref, cp.stream_series(d["vr1"]["streams"], d["vr1"]["start_local"]), show=False)
+        r2 = cp.meter_offset(ref, cp.stream_series(d["vr2"]["streams"], d["vr2"]["start_local"]), show=False)
+        check("KICKR vs Stages 6 Nov: MyWhoosh clock -51 s / -2 s, KICKR 6-10% above Stages", abs(r1["lag_s"] + 51) <= 3 and abs(r2["lag_s"]) <= 3 and 1.06 < r1["ratio"] < 1.11 and 1.06 < r2["ratio"] < 1.11,
+              "lags %+d / %+d s, ratios %.3f / %.3f" % (r1["lag_s"], r2["lag_s"], r1["ratio"], r2["ratio"]))
+    guarded(meters)
+
+    def segments():
+        if not os.path.exists(os.path.join(HERE, "segments.json")): return skip("segments", "segments.json not in the repo")
+        if not csv: return skip("segments", "no strava_export_*.zip found")
+        import segments_tool as st
+        data = st.load_segments(os.path.join(HERE, "segments.json")); seg = {s["id"]: s for s in data["segments"]}
+        import gzip
+        f = ride("2026-09-27"); raw = open(f, "rb").read(); acts = {"0927": st._from_fit_bytes(gzip.decompress(raw) if f.endswith(".gz") else raw)}
+        fp = st.fingerprint(acts, km=1.56, time_s=221, w=248, cad=88, hr=183, hrmax=189, show=False)
+        check("segments: fingerprint finds Mount Phantasialand PR on 27 Sep (221 s, 248 W)", fp and fp[0][0] < 3 and abs(fp[0][5] - 248.1) < 0.5, "score %.1f, %.1f W" % (fp[0][0], fp[0][5]) if fp else "none")
+        e1 = st.find_efforts(acts, seg[6678444]["ref"]); e2 = st.find_efforts(acts, seg[42273304]["ref"])
+        check("segments: 27 Sep Flammgasse 136 s / 270 W; Kierberger 2 efforts 106 s + 69 s (Strava 109 / 69 s)",
+              len(e1) == 1 and abs(e1[0]["time_s"] - 136) <= 1 and abs(e1[0]["w"] - 270.3) < 1.5 and len(e2) == 2 and abs(e2[1]["time_s"] - 69) <= 1 and abs(e2[0]["time_s"] - 108) <= 3,
+              "%s / %s" % ([round(e["time_s"]) for e in e1], [round(e["time_s"]) for e in e2]))
+    guarded(segments)
+
     n = {k: sum(1 for x in RES if x[0] == k) for k in ("PASS", "FAIL", "SKIP")}
     print("\nSUMMARY: %(PASS)d passed, %(FAIL)d failed, %(SKIP)d skipped" % n)
     return 1 if n["FAIL"] else 0
