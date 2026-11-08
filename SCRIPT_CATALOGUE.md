@@ -117,6 +117,12 @@ Counts: PORTED 29, SUPERSEDED 4, PATTERN 6, ONE-OFF 19, HOUSEKEEPING 26, DUPLICA
 - HR-zone fit against power zones (steady windows, balanced accuracy, grid search, bootstrap by ride) → `cp_lib.hr_power_windows`, `cp_lib.hr_zone_score`, `cp_lib.hr_zone_optimise`; regression of HR on power with ride fixed effects (0.40 bpm/W within rides, 0.8 bpm/°C between rides) was ad hoc.
 - Hour-test analysis prepared → `cp_lib.hour_test_report`.
 
+## 8 Nov (chat 2)
+- Segments: 3 more attempted (Liblarer->Bleibtreu See, Fischenich Berg Gleise -> Ampel, Fischenich Berg; fingerprints 0.2-1.6) and 20 to-do climbs with an internal elevation check (grade x length vs difference); `hr_flag` gained a 150 W / 2 min tier and "HR partial" (coverage); `hr_unusable` now holds 17 Oct, 10 Sep min 13-58, 5 Sep min 20-36, 29 Sep min 54-58.
+- `cp_lib.hr_artefact_scan` gained the 150 W / 2 min tier and ignores the first 5 min; new `cp_lib.hr_gaps` (missing HR while riding).
+- 7 Nov KICKR vs Stages from both FITs (`meter_offset`): +4%, zero offset without effect, +8% at cadence below 60 (ad hoc cadence binning).
+- HR-zone variants scored against power zones with Z4 = 90-110% FTP and against the HR of best 2-20 min efforts (ad hoc).
+
 ## Gotchas learned along the way (all handled in the library)
 - `np.convolve(..., mode='same')` pads the edges with zeros: fake climbs at every route start (fixed with edge padding).
 - Strava-made run FIT files: the speed field is unreliable (smoothed phone speed); use the distance field. Garmin ride FITs have gaps where the timer was paused.
@@ -133,3 +139,4 @@ Counts: PORTED 29, SUPERSEDED 4, PATTERN 6, ONE-OFF 19, HOUSEKEEPING 26, DUPLICA
 - Strava segment elevations (low/high) come from other devices and can be offset by 35-70 m; elevation differences agree with the Edge within about 3 m.
 - HR lag: average HR of a short hard effort says little about strap quality; use the HR at its end.
 - The Strava connector returns the run/default HR zone set, not the cycling set (app only).
+- Strava draws missing HR as a flat ("frozen") line: look for gaps in the file, not for constant values.
