@@ -1,4 +1,4 @@
-"""segments_tool.py - Strava segments: reference geometry, effort archive and PR fingerprinting (v1.1, 2026-11-07).
+"""segments_tool.py - Strava segments: reference geometry, effort archive and PR fingerprinting (v1.2, 2026-11-08).
 
 Strava's connector has no segment tool and the bulk export has no segment efforts, so this rebuilds them from the ride files:
   1. segments.json holds each segment's metadata (Pat's Strava values) and a 25-point reference line along its course. The line was taken from
@@ -189,6 +189,7 @@ def find_efforts(acts, ref, rad=40.0, trk=40.0):
                             w_el=float(np.nansum(np.nan_to_num(P[1:]) * np.minimum(dt, 2.0)) / el) if np.isfinite(P).any() and el > 0 else np.nan,
                             hr_start=float(np.nanmean(H[:10])) if np.isfinite(H[:10]).any() else np.nan,
                             hr_end=float(np.nanmean(H[-10:])) if np.isfinite(H[-10:]).any() else np.nan,
+                            hr_cov=float((np.isfinite(H) & (H > 0)).mean()) if len(H) else 0.0,
                             ride_min=float((t[i] - t[0]) / 60), ride_min_end=float((t[j] - t[0]) / 60)))
     return sorted(out, key=lambda x: x["start"])
 
@@ -199,7 +200,8 @@ def _local(ts):
 
 # ----------------------------------------------------------------------------- ARCHIVE
 DEFAULTS = dict(tracking=dict(min_rel_power=0.80, time_factor_climb=1.25, time_factor_flat=1.08, climb_grade_pct=3.0),
-                hr_check=dict(min_w=200.0, min_s=30.0, end_hr=145.0, long_s=120.0, avg_hr_long=140.0, drop_bpm=5.0))
+                hr_check=dict(min_w=200.0, min_s=30.0, end_hr=145.0, long_s=120.0, avg_hr_long=140.0, drop_bpm=5.0,
+                              mod_w=150.0, mod_s=120.0, mod_end_hr=135.0, min_cov=0.8))
 
 
 def _cfg(data, k):
@@ -219,9 +221,14 @@ def hr_flag(e, cfg=None):
     """'HR?' when the HR cannot be right for the power (strap artefact). Average HR alone is not enough: HR lags 30-90 s, so genuine
     45-s efforts at 200+ W often average only 128-142 bpm (rising from about 100-125 to 155-170). Flag an effort of >= min_s at >= min_w
     when HR at its end (last 10 s) is below end_hr, when HR falls by more than drop_bpm across it, or when an effort of >= long_s
-    averages below avg_hr_long. Defaults for Pat in Nov 2026: 200 W, 30 s, end 145, 2 min / 140, drop 5 (raise them as fitness changes)."""
-    c = cfg or DEFAULTS["hr_check"]
-    if not (np.isfinite(e.get("hr", np.nan)) and np.isfinite(e.get("w", np.nan))) or e["w"] < c["min_w"] or e["time_s"] < c["min_s"]: return ""
+    averages below avg_hr_long; also an effort of >= mod_s at >= mod_w ending below mod_end_hr (5 Sep: 75-130 bpm at 180 W), and
+    'HR partial' when less than min_cov of the effort has HR. Defaults for Pat in Nov 2026: 200 W, 30 s, end 145, 2 min / 140, drop 5;
+    150 W / 2 min / 135; coverage 80% (raise them as fitness changes)."""
+    c = {**DEFAULTS["hr_check"], **(cfg or {})}
+    if np.isfinite(e.get("hr", np.nan)) and e.get("hr_cov", 1.0) < c["min_cov"]: return "HR partial"
+    if not (np.isfinite(e.get("hr", np.nan)) and np.isfinite(e.get("w", np.nan))): return ""
+    if e["w"] >= c["mod_w"] and e["time_s"] >= c["mod_s"] and np.isfinite(e.get("hr_end", np.nan)) and e["hr_end"] < c["mod_end_hr"]: return "HR?"
+    if e["w"] < c["min_w"] or e["time_s"] < c["min_s"]: return ""
     if np.isfinite(e.get("hr_end", np.nan)) and e["hr_end"] < c["end_hr"]: return "HR?"
     if np.isfinite(e.get("hr_start", np.nan)) and np.isfinite(e.get("hr_end", np.nan)) and e["hr_start"] - e["hr_end"] > c["drop_bpm"]: return "HR?"
     if e["time_s"] >= c["long_s"] and e["hr"] < c["avg_hr_long"]: return "HR?"
