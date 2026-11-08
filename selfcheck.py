@@ -105,6 +105,10 @@ def main():
         check("fit_inspect: Garmin file with laps, events, HRV", i["n_hrv"] > 1000 and i["n_laps"] >= 1 and i["records"] > 5000, "%d records, %d laps, %d hrv" % (i["records"], i["n_laps"], i["n_hrv"]))
         df, s = cp.hrv_quality(f20)
         check("hrv_quality: returns windows and a sane artefact rate", len(df) > 50 and 0 <= s["artefact_pct"] < 15, str(s))
+        w20 = cp.hr_power_windows(cp.load_activity(f20)[2]); sc = cp.hr_zone_score(w20, [133, 148, 162, 173], 180)
+        check("hr_power_windows / hr_zone_score on 20 Sep: windows found, scores in range", len(w20) > 50 and 0 <= sc["balanced"] <= 1, "%d windows, balanced %.2f" % (len(w20), sc["balanced"]))
+        s10 = cp.hr_artefact_scan(cp.load_activity(ride("2026-09-10"))[2])
+        check("hr_artefact_scan: 10 Sep strap dropouts found (min 42-58)", any(a < 50 and b > 44 for a, b, n in s10) and any(a < 58 and b > 52 for a, b, n in s10), str([(float(a), float(b), n) for a, b, n in s10]))
         check("fit_laps / fit_pauses: tables", len(cp.fit_laps(f20)) >= 1 and len(cp.fit_pauses(f20)) >= 0)
     if csv: guarded(rides)
     else: skip("ride tests (20/22/19 Sep)", "no strava_export_*.zip found")
@@ -157,6 +161,8 @@ def main():
         check("4DP 1 Nov: 5 min 230.8 W, 20 min 183.9 W, 1 min 312.0 W (best windows)", abs(b["5min"]["avg_w"] - 230.8) < 0.5 and abs(b["20min"]["avg_w"] - 183.9) < 0.5 and abs(b["1min"]["avg_w"] - 312.0) < 0.5, "%.1f / %.1f / %.1f W" % (b["5min"]["avg_w"], b["20min"]["avg_w"], b["1min"]["avg_w"]))
         check("4DP 1 Nov: sprints 672 / 686 W, meter consistent with physics", len(sp) == 2 and abs(sp[0]["best5s_w"] - 672) < 2 and abs(sp[1]["best5s_w"] - 686) < 2 and all(0.8 < x["energy"]["ratio"] < 1.25 for x in sp), str([(round(x["best5s_w"]), round(float(x["energy"]["ratio"]), 2)) for x in sp]))
         check("4DP 1 Nov: gap before the 20 min includes a 3:13 stop", abs(r["gaps"]["5min->20min"]["stopped_s"] - 193) <= 3, "%d s stopped" % r["gaps"]["5min->20min"]["stopped_s"])
+        h = cp.hour_test_report(f, dur=1200, show=False)
+        check("hour_test_report on the 4DP 20 min: 183.9 W, HR 171.9 flat (LTHR estimate)", abs(h["avg_w"] - 183.9) < 0.3 and abs(h["lthr_est"] - 171.9) < 0.3 and abs(h["hr_halves"][0] - h["hr_halves"][1]) < 1, "%.1f W, HR %.1f" % (h["avg_w"], h["lthr_est"]))
     guarded(fourdp)
 
     def meters():
@@ -169,6 +175,22 @@ def main():
         check("KICKR vs Stages 6 Nov: MyWhoosh clock -51 s / -2 s, KICKR 6-10% above Stages", abs(r1["lag_s"] + 51) <= 3 and abs(r2["lag_s"]) <= 3 and 1.06 < r1["ratio"] < 1.11 and 1.06 < r2["ratio"] < 1.11,
               "lags %+d / %+d s, ratios %.3f / %.3f" % (r1["lag_s"], r2["lag_s"], r1["ratio"], r2["ratio"]))
     guarded(meters)
+
+    def segment_rules():
+        import segments_tool as st
+        pr = dict(time_s=69, w=270.3, w_el=270.3)
+        ok = [st.is_tracked(dict(time_s=82, w=236, w_el=236.4), pr, -0.2), not st.is_tracked(dict(time_s=83, w=194, w_el=194), pr, -0.2),
+              not st.is_tracked(dict(time_s=75, w=280, w_el=180), pr, -0.2),                       # stop inside: elapsed power counts
+              st.is_tracked(dict(time_s=74, w=float("nan"), w_el=float("nan")), dict(time_s=69, w=float("nan")), -0.2),
+              not st.is_tracked(dict(time_s=76, w=float("nan"), w_el=float("nan")), dict(time_s=69, w=float("nan")), -0.2),   # 1.10 x on the flat
+              st.is_tracked(dict(time_s=84, w=float("nan"), w_el=float("nan")), dict(time_s=69, w=float("nan")), 4.2)]        # 1.22 x on a climb
+        check("segments: tracking rule (80% of PR power, stops count, time rule without power)", all(ok), str(ok))
+        e = lambda **k: {**dict(time_s=45, w=230, hr=135, hr_start=105, hr_end=165), **k}
+        fl = [st.hr_flag(e()), st.hr_flag(e(hr_end=72, hr=70, hr_start=70)), st.hr_flag(e(hr_start=141, hr_end=130, hr=137)), st.hr_flag(e(time_s=150, hr=125, hr_end=150)), st.hr_flag(e(w=150, hr=90, hr_end=90))]
+        check("segments: HR check (lagging HR ok; low end HR, falling HR, low 2-min avg flagged)", fl == ["", "HR?", "HR?", "HR?", ""], str(fl))
+        u = st.hr_unusable({"hr_unusable": {"1": "bad", "2": {"from_min": 40, "to_min": 58, "note": "x"}}}, dict(key="2", ride_min=50, ride_min_end=52))
+        check("segments: rides / minute ranges with unusable HR", u == "x" and st.hr_unusable({"hr_unusable": {"1": "bad"}}, dict(key="1", ride_min=0, ride_min_end=1)) == "bad")
+    guarded(segment_rules)
 
     def segments():
         if not os.path.exists(os.path.join(HERE, "segments.json")): return skip("segments", "segments.json not in the repo")
