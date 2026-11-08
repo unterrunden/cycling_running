@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""cp_lib.py (v1.2, 2026-11-07) - reusable helpers for the 'cycling | running' coaching project.
+"""cp_lib.py (v1.3, 2026-11-08) - reusable helpers for the 'cycling | running' coaching project.
 
 Companion to analysis_tools.py (activity files -> reports / digest) and routes_tool.py (GPX route geometry).
 This module collects everything else that was written ad hoc during the chats:
@@ -561,22 +561,43 @@ def meter_offset(ref, other, max_lag=180, steady_sd=15.0, bands=(60, 100, 120, 1
     return res
 
 
-def hr_artefact_scan(tl, min_w=200.0, dur=45, end_hr=145.0, drop_bpm=5.0, merge_min=3.0):
-    """Minute ranges where HR cannot match the power (strap artefacts): >= dur s at >= min_w W with power held in every third, HR at the end of the window below
-    end_hr, or HR falling by more than drop_bpm across it. Genuine efforts start low because HR lags, but rise (to 155-170 for Pat).
-    tl = load_activity(path)[2]. Returns [(from_min, to_min, n_windows)]. Found 10 Sep min 40-58 (66-79 bpm at 200 W) and 17 Oct."""
-    P = np.nan_to_num(tl["P"]); H = np.asarray(tl["H"], float); c = np.convolve(P, np.ones(dur) / dur, "valid"); hits = []
-    for i in np.where(c >= min_w)[0][::5]:
-        h = H[i:i + dur]; q = P[i:i + dur]
-        if np.isfinite(h).mean() < 0.6 or not np.isfinite(h[-10:]).any() or not np.isfinite(h[:10]).any(): continue
-        if min(q[:dur // 3].mean(), q[dur // 3:2 * dur // 3].mean(), q[2 * dur // 3:].mean()) < 0.8 * min_w: continue   # power held throughout
-        a, b = np.nanmean(h[:10]), np.nanmean(h[-10:])
-        if b < end_hr or a - b > drop_bpm: hits.append(i / 60)
+def hr_artefact_scan(tl, rules=((200.0, 45, 145.0, 5.0), (150.0, 120, 135.0, None)), merge_min=3.0, skip_min=5.0):
+    """Minute ranges where HR cannot match the power (strap artefacts). Each rule (min_w, dur_s, end_hr, drop_bpm): a window of dur_s with
+    power held in every third (>= 0.8 x min_w) and mean >= min_w, whose HR at the end (last 10 s) is below end_hr, or (if drop_bpm) falls
+    by more than drop_bpm across it. Genuine efforts start low because HR lags, but rise (to 155-170 for Pat). Defaults: >= 200 W for 45 s
+    (end < 145 or falling > 5), >= 150 W for 2 min (end < 135); the first skip_min minutes are ignored (HR still rising from rest, dry
+    strap). tl = load_activity(path)[2]. Returns [(from_min, to_min, n_windows)].
+    Found: 5 Sep min 22-29 (HR 75-130 at 180 W), 10 Sep min 40-58, 17 Oct (four stretches), 29 Sep min 56-57."""
+    P = np.nan_to_num(tl["P"]); H = np.asarray(tl["H"], float); hits = []
+    for min_w, dur, end_hr, drop_bpm in rules:
+        c = np.convolve(P, np.ones(dur) / dur, "valid")
+        for i in np.where(c >= min_w)[0][::5]:
+            if i < skip_min * 60: continue
+            h = H[i:i + dur]; q = P[i:i + dur]
+            if np.isfinite(h).mean() < 0.6 or not np.isfinite(h[-10:]).any() or not np.isfinite(h[:10]).any(): continue
+            if min(q[:dur // 3].mean(), q[dur // 3:2 * dur // 3].mean(), q[2 * dur // 3:].mean()) < 0.8 * min_w: continue   # power held throughout
+            a, b = np.nanmean(h[:10]), np.nanmean(h[-10:])
+            if b < end_hr or (drop_bpm is not None and a - b > drop_bpm): hits.append((i / 60, (i + dur) / 60))
     out = []
-    for m in hits:
-        if out and m - out[-1][1] <= merge_min: out[-1] = (out[-1][0], m + dur / 60, out[-1][2] + 1)
-        else: out.append((m, m + dur / 60, 1))
+    for s, e in sorted(hits):
+        if out and s - out[-1][1] <= merge_min: out[-1] = (out[-1][0], max(out[-1][1], e), out[-1][2] + 1)
+        else: out.append((s, e, 1))
     return [(round(a, 1), round(b, 1), n) for a, b, n in out]
+
+
+def hr_gaps(tl, min_s=30):
+    """Stretches of riding (power or speed present) with missing or zero HR (strap lost) of at least min_s seconds (short gaps inside a
+    stretch end it): [(from_min, to_min)]. Strava draws missing HR as a flat line (10 Sep km 7.3-14)."""
+    H = np.asarray(tl["H"], float); mv = (np.nan_to_num(tl["P"]) > 0) | (np.nan_to_num(tl["S"]) > 1.0)    # riding, not paused
+    bad = (~np.isfinite(H) | (H <= 0)) & mv; out = []; i = 0
+    while i < len(H):
+        if bad[i]:
+            j = i
+            while j + 1 < len(H) and bad[j + 1]: j += 1
+            if j - i + 1 >= min_s: out.append((round(i / 60, 1), round((j + 1) / 60, 1)))
+            i = j + 1
+        else: i += 1
+    return out
 
 
 def hr_power_windows(tl, win_s=300, hr_last_s=120, skip_s=900, max_cv=0.45, min_speed=1.5, bad=None):
