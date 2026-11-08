@@ -111,6 +111,12 @@ Counts: PORTED 29, SUPERSEDED 4, PATTERN 6, ONE-OFF 19, HOUSEKEEPING 26, DUPLICA
 - Climb physics check of the Stages (meter energy vs m·g·h + drag + kinetic energy on segment efforts): ad hoc, results in `segments.md` (candidate for a later helper).
 - `cp_lib.hrv_quality`: junk RR values > 3 s are left out of the time axis (the 6 Nov file spread a 38-min ride over 220 "minutes").
 
+## 7 Nov (chat 2)
+- Segment tracking (Pat): only efforts with elapsed-based power >= 80% of the PR effort's power (time rule without power: 1.25 x on climbs, 1.08 x elsewhere) → `segments_tool.is_tracked`; rides with unusable HR (`hr_unusable` in `segments.json`, 17 Oct per Pat, 10 Sep min 40-58) → `segments_tool.hr_unusable`; HR artefact check by end-of-effort HR → `segments_tool.hr_flag`.
+- Whole-ride strap check → `cp_lib.hr_artefact_scan` (found 10 Sep min 42-58 and 29 Sep min 56-57, besides 17 Oct).
+- HR-zone fit against power zones (steady windows, balanced accuracy, grid search, bootstrap by ride) → `cp_lib.hr_power_windows`, `cp_lib.hr_zone_score`, `cp_lib.hr_zone_optimise`; regression of HR on power with ride fixed effects (0.40 bpm/W within rides, 0.8 bpm/°C between rides) was ad hoc.
+- Hour-test analysis prepared → `cp_lib.hour_test_report`.
+
 ## Gotchas learned along the way (all handled in the library)
 - `np.convolve(..., mode='same')` pads the edges with zeros: fake climbs at every route start (fixed with edge padding).
 - Strava-made run FIT files: the speed field is unreliable (smoothed phone speed); use the distance field. Garmin ride FITs have gaps where the timer was paused.
@@ -125,3 +131,5 @@ Counts: PORTED 29, SUPERSEDED 4, PATTERN 6, ONE-OFF 19, HOUSEKEEPING 26, DUPLICA
 - MyWhoosh start_local can be off by tens of seconds (51 s on 6 Nov): align two recordings by HR, never by the stated start.
 - Edge 540 indoors with GPS on: a GPS scribble, 0.13 km and 6 min "moving time" in Strava; Strava's moving time for that file is meaningless.
 - Strava segment elevations (low/high) come from other devices and can be offset by 35-70 m; elevation differences agree with the Edge within about 3 m.
+- HR lag: average HR of a short hard effort says little about strap quality; use the HR at its end.
+- The Strava connector returns the run/default HR zone set, not the cycling set (app only).
