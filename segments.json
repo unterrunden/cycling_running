@@ -1,8 +1,32 @@
 {
- "version": 1,
- "asof": "2026-11-06",
+ "version": 2,
+ "asof": "2026-11-07",
  "rider_kg": 60.0,
  "meter": "Stages left-only (outdoor); values are on the Stages scale",
+ "tracking": {
+  "min_rel_power": 0.8,
+  "time_factor_climb": 1.25,
+  "time_factor_flat": 1.08,
+  "climb_grade_pct": 3.0,
+  "note": "Pat 7 Nov: track only efforts with power >= 80% of the current PR effort's power, standing time included (elapsed-based power)"
+ },
+ "hr_check": {
+  "min_w": 200.0,
+  "min_s": 30.0,
+  "end_hr": 145.0,
+  "long_s": 120.0,
+  "avg_hr_long": 140.0,
+  "drop_bpm": 5.0,
+  "note": "strap-artefact check for efforts >= 30 s at >= 200 W; Pat suggested 135-140; to raise as fitness changes"
+ },
+ "hr_unusable": {
+  "20624225134": "HR data inaccurate and not usable (Pat: 17 Oct, derailleur failure ride)",
+  "20120588588": {
+   "from_min": 40,
+   "to_min": 58,
+   "note": "HR?: strap dropouts 10 Sep min 40-58 (66-79 bpm at 200 W; found 7 Nov, to confirm)"
+  }
+ },
  "segments": [
   {
    "id": 23234747,
@@ -1147,7 +1171,7 @@
    "elev_diff": 17,
    "cat": null,
    "strava_pr": null,
-   "note": "",
+   "note": "Strava lists an effort on 30 Oct (4:50, 132 W, HR 147, cad 82) although Pat listed it as not attempted; geometry from the 30 Oct file",
    "ref": null
   }
  ]
