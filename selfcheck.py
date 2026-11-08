@@ -109,6 +109,8 @@ def main():
         check("hr_power_windows / hr_zone_score on 20 Sep: windows found, scores in range", len(w20) > 50 and 0 <= sc["balanced"] <= 1, "%d windows, balanced %.2f" % (len(w20), sc["balanced"]))
         s10 = cp.hr_artefact_scan(cp.load_activity(ride("2026-09-10"))[2])
         check("hr_artefact_scan: 10 Sep strap dropouts found (min 42-58)", any(a < 50 and b > 44 for a, b, n in s10) and any(a < 58 and b > 52 for a, b, n in s10), str([(float(a), float(b), n) for a, b, n in s10]))
+        s5 = cp.hr_artefact_scan(cp.load_activity(ride("2026-09-05"))[2]); g10 = cp.hr_gaps(cp.load_activity(ride("2026-09-10"))[2], 30)
+        check("hr_artefact_scan 5 Sep (75-130 bpm at 180 W, min 20-29) and hr_gaps 10 Sep (km 7-14 frozen in Strava = missing)", any(a < 24 and b > 26 for a, b, n in s5) and any(a < 34 and b > 31 for a, b in g10), "%s / %s" % ([(float(a), float(b), n) for a, b, n in s5][:2], g10[:3]))
         check("fit_laps / fit_pauses: tables", len(cp.fit_laps(f20)) >= 1 and len(cp.fit_pauses(f20)) >= 0)
     if csv: guarded(rides)
     else: skip("ride tests (20/22/19 Sep)", "no strava_export_*.zip found")
@@ -174,6 +176,11 @@ def main():
         r2 = cp.meter_offset(ref, cp.stream_series(d["vr2"]["streams"], d["vr2"]["start_local"]), show=False)
         check("KICKR vs Stages 6 Nov: MyWhoosh clock -51 s / -2 s, KICKR 6-10% above Stages", abs(r1["lag_s"] + 51) <= 3 and abs(r2["lag_s"]) <= 3 and 1.06 < r1["ratio"] < 1.11 and 1.06 < r2["ratio"] < 1.11,
               "lags %+d / %+d s, ratios %.3f / %.3f" % (r1["lag_s"], r2["lag_s"], r1["ratio"], r2["ratio"]))
+        g7, k7 = find("07_11_garmin.fit"), find("07_11_kickr.fit")
+        if g7 and k7:
+            r7 = cp.meter_offset(cp.fit_series(g7), cp.fit_series(k7), show=False)
+            check("KICKR vs Stages 7 Nov (both FITs, 1 Hz): lag -3 s, KICKR about 4% above Stages", abs(r7["lag_s"] + 3) <= 2 and 1.02 < r7["ratio"] < 1.06, "lag %+d s, ratio %.3f" % (r7["lag_s"], r7["ratio"]))
+        else: skip("KICKR vs Stages 7 Nov", "tests/07_11_*.fit not in the repo (optional)")
     guarded(meters)
 
     def segment_rules():
@@ -186,8 +193,9 @@ def main():
               st.is_tracked(dict(time_s=84, w=float("nan"), w_el=float("nan")), dict(time_s=69, w=float("nan")), 4.2)]        # 1.22 x on a climb
         check("segments: tracking rule (80% of PR power, stops count, time rule without power)", all(ok), str(ok))
         e = lambda **k: {**dict(time_s=45, w=230, hr=135, hr_start=105, hr_end=165), **k}
-        fl = [st.hr_flag(e()), st.hr_flag(e(hr_end=72, hr=70, hr_start=70)), st.hr_flag(e(hr_start=141, hr_end=130, hr=137)), st.hr_flag(e(time_s=150, hr=125, hr_end=150)), st.hr_flag(e(w=150, hr=90, hr_end=90))]
-        check("segments: HR check (lagging HR ok; low end HR, falling HR, low 2-min avg flagged)", fl == ["", "HR?", "HR?", "HR?", ""], str(fl))
+        fl = [st.hr_flag(e()), st.hr_flag(e(hr_end=72, hr=70, hr_start=70)), st.hr_flag(e(hr_start=141, hr_end=130, hr=137)), st.hr_flag(e(time_s=150, hr=125, hr_end=150)), st.hr_flag(e(w=150, hr=90, hr_end=90)),
+              st.hr_flag(e(w=180, time_s=238, hr=106, hr_start=128, hr_end=96)), st.hr_flag(e(hr_cov=0.5))]
+        check("segments: HR check (lagging HR ok; low end HR, falling HR, low 2-min avg, 150 W tier, coverage flagged)", fl == ["", "HR?", "HR?", "HR?", "", "HR?", "HR partial"], str(fl))
         u = st.hr_unusable({"hr_unusable": {"1": "bad", "2": {"from_min": 40, "to_min": 58, "note": "x"}}}, dict(key="2", ride_min=50, ride_min_end=52))
         check("segments: rides / minute ranges with unusable HR", u == "x" and st.hr_unusable({"hr_unusable": {"1": "bad"}}, dict(key="1", ride_min=0, ride_min_end=1)) == "bad")
     guarded(segment_rules)
