@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""cp_lib.py (v1.1, 2026-11-05) - reusable helpers for the 'cycling | running' coaching project.
+"""cp_lib.py (v1.2, 2026-11-07) - reusable helpers for the 'cycling | running' coaching project.
 
 Companion to analysis_tools.py (activity files -> reports / digest) and routes_tool.py (GPX route geometry).
 This module collects everything else that was written ad hoc during the chats:
@@ -558,6 +558,101 @@ def meter_offset(ref, other, max_lag=180, steady_sd=15.0, bands=(60, 100, 120, 1
     if show:
         print("lag %+d s (%s r %.3f), %d samples, overall ratio %.3f, steady fit other = %.3f x ref %+.1f W" % (lag, which, cs.max(), res["n"], res["ratio"], fit[0], fit[1]))
         for b in rows: print("  ref %3d-%3d W  n %3d  other %.1f  ref %.1f  diff %+.1f W  ratio %.3f" % b)
+    return res
+
+
+def hr_artefact_scan(tl, min_w=200.0, dur=45, end_hr=145.0, drop_bpm=5.0, merge_min=3.0):
+    """Minute ranges where HR cannot match the power (strap artefacts): >= dur s at >= min_w W with power held in every third, HR at the end of the window below
+    end_hr, or HR falling by more than drop_bpm across it. Genuine efforts start low because HR lags, but rise (to 155-170 for Pat).
+    tl = load_activity(path)[2]. Returns [(from_min, to_min, n_windows)]. Found 10 Sep min 40-58 (66-79 bpm at 200 W) and 17 Oct."""
+    P = np.nan_to_num(tl["P"]); H = np.asarray(tl["H"], float); c = np.convolve(P, np.ones(dur) / dur, "valid"); hits = []
+    for i in np.where(c >= min_w)[0][::5]:
+        h = H[i:i + dur]; q = P[i:i + dur]
+        if np.isfinite(h).mean() < 0.6 or not np.isfinite(h[-10:]).any() or not np.isfinite(h[:10]).any(): continue
+        if min(q[:dur // 3].mean(), q[dur // 3:2 * dur // 3].mean(), q[2 * dur // 3:].mean()) < 0.8 * min_w: continue   # power held throughout
+        a, b = np.nanmean(h[:10]), np.nanmean(h[-10:])
+        if b < end_hr or a - b > drop_bpm: hits.append(i / 60)
+    out = []
+    for m in hits:
+        if out and m - out[-1][1] <= merge_min: out[-1] = (out[-1][0], m + dur / 60, out[-1][2] + 1)
+        else: out.append((m, m + dur / 60, 1))
+    return [(round(a, 1), round(b, 1), n) for a, b, n in out]
+
+
+def hr_power_windows(tl, win_s=300, hr_last_s=120, skip_s=900, max_cv=0.45, min_speed=1.5, bad=None):
+    """Quasi-steady windows of one ride for HR-zone work: every 60 s a `win_s` window (after the first `skip_s`), moving throughout,
+    10-s power CV <= max_cv; HR = mean of its last `hr_last_s` s (HR lag). bad = [(from_min, to_min)] to blank (strap artefacts).
+    Returns an array of (power, HR) rows."""
+    P = np.nan_to_num(tl["P"]); H = np.asarray(tl["H"], float).copy(); S = np.nan_to_num(tl["S"]); out = []
+    for a, b in (bad or []): H[int(a * 60):int(b * 60)] = np.nan
+    for e in range(skip_s, len(P), 60):
+        s = e - win_s; p = P[s:e]; h = H[e - hr_last_s:e]
+        if s < 0 or (S[s:e] < min_speed).mean() > 0.05 or np.isfinite(h).mean() < 0.9: continue
+        q = p[:win_s // 10 * 10].reshape(-1, 10).mean(1)
+        if q.mean() <= 0 or q.std() / q.mean() > max_cv: continue
+        hv = np.nanmean(h)
+        if hv < 110 and p.mean() > 150: continue
+        out.append((p.mean(), hv))
+    return np.array(out)
+
+
+def hr_zone_score(win, edges, ftp, pz=(0.55, 0.75, 0.90, 1.05)):
+    """How well 5 HR zones (upper edges, e.g. [133, 148, 162, 173]: Z1 < 133 ...) reproduce the power zone (Coggan 5-zone fractions
+    of ftp) of each window. Returns dict(balanced, exact, recall per power zone 2-5). Balanced = mean recall, so the big Z3 share
+    does not dominate. 7 Nov: Pat's old set 44%, data-fitted set 63%."""
+    z = np.digitize(win[:, 0], [f * ftp for f in pz]) + 1; hz = np.digitize(win[:, 1], edges) + 1
+    rec = {k: float((hz[z == k] == k).mean()) for k in (2, 3, 4, 5) if (z == k).sum() >= 10}
+    return dict(balanced=float(np.mean(list(rec.values()))) if rec else np.nan, exact=float((hz == z).mean()), recall=rec)
+
+
+def hr_zone_optimise(win, ftp, z1=133, grid=((140, 152), (152, 166), (166, 182))):
+    """Grid search of the Z2/Z3, Z3/Z4 and Z4/Z5 HR edges (Z1 edge fixed: few steady recovery windows) maximising hr_zone_score's
+    balanced accuracy. 7 Nov (21 rides, 967 windows, FTP 175-185): 147 / 162 / 172; bootstrap by ride 145-149 / 156-164 / 172-174."""
+    best = (-1, None)
+    for a in range(*grid[0]):
+        for b in range(*grid[1]):
+            for c in range(*grid[2]):
+                s = hr_zone_score(win, [z1, a, b, c], ftp)["balanced"]
+                if s > best[0]: best = (s, [z1, a, b, c])
+    return dict(edges=best[1], balanced=best[0])
+
+
+def _series_1hz(s):
+    """fit_series dict -> (t0, P, H, C) on a 1 Hz grid of elapsed seconds; gaps (pauses) are 0 W and NaN HR/cadence."""
+    t0 = int(np.floor(np.nanmin(s["t"]))); n = int(np.ceil(np.nanmax(s["t"]))) - t0 + 1; k = (np.asarray(s["t"]) - t0).astype(int)
+    P = np.zeros(n); H = np.full(n, np.nan); C = np.full(n, np.nan)
+    P[k] = np.nan_to_num(s["p"]); H[k] = s["hr"]; C[k] = s["cad"] if "cad" in s and len(s["cad"]) else np.nan
+    return t0, P, H, C
+
+
+def hour_test_report(path, other=None, dur=3600, block_s=300, lthr_last_s=1200, show=True):
+    """Analyse a long all-out test (default the 60-min FTP test) from one FIT (e.g. Edge/Stages), optionally a second recording of the same
+    ride (`other`, e.g. the MyWhoosh/KICKR FIT): best `dur` window (elapsed: pauses count as 0 W), per-block W / HR / cadence, halves,
+    pacing CV of 1-min means, Pw:HR decoupling, HR drift, LTHR estimate = average HR of the last `lthr_last_s` seconds (Friel), NP;
+    with `other`: its average over the same (HR-aligned) window and the meter_offset table. Returns a dict."""
+    s = fit_series(path); t0, P, H, C = _series_1hz(s)
+    if len(P) < dur: raise ValueError("file shorter than %d s" % dur)
+    c = np.convolve(P, np.ones(dur) / dur, "valid"); i = int(np.argmax(c)); w = slice(i, i + dur)
+    p, h, cd = P[w], H[w], C[w]; half = dur // 2; m1 = p[:dur // 60 * 60].reshape(-1, 60).mean(1)
+    blocks = [dict(start_min=k / 60, w=float(p[k:k + block_s].mean()), hr=float(np.nanmean(h[k:k + block_s])), hr_end=float(np.nanmean(h[k + block_s - 30:k + block_s])),
+                   cad=float(np.nanmean(cd[k:k + block_s][cd[k:k + block_s] > 0])) if (cd[k:k + block_s] > 0).any() else np.nan) for k in range(0, dur, block_s)]
+    w1, w2 = p[:half].mean(), p[half:].mean(); h1, h2 = np.nanmean(h[:half]), np.nanmean(h[half:])
+    at = _at(); res = dict(start_min=i / 60, avg_w=float(p.mean()), np_w=float(at.norm_power(p)), cv_1min=float(m1.std() / m1.mean()),
+               w_halves=(float(w1), float(w2)), hr_halves=(float(h1), float(h2)), decoupling_pct=float(((w1 / h1) / (w2 / h2) - 1) * 100),
+               hr_avg=float(np.nanmean(h)), hr_max=float(np.nanmax(h)), lthr_est=float(np.nanmean(h[-lthr_last_s:])), zero_s=int((p == 0).sum()),
+               cad=float(np.nanmean(cd[cd > 0])) if (cd > 0).any() else np.nan, blocks=blocks)
+    if other is not None:
+        o = fit_series(other) if isinstance(other, str) else other
+        mo = meter_offset(s, o, show=False); to, Po, Ho, Co = _series_1hz(o); a = int(t0 + i - mo["lag_s"] - to)
+        if 0 <= a and a + dur <= len(Po): res["other_avg_w"] = float(Po[a:a + dur].mean()); res["other_zero_s"] = int((Po[a:a + dur] == 0).sum())
+        res["meter"] = mo
+    if show:
+        print("best %d min from min %.1f: %.1f W (NP %.1f), 1-min CV %.1f%%, halves %.1f / %.1f W, HR %.1f / %.1f, decoupling %+.1f%%, zeros %d s" % (
+            dur // 60, res["start_min"], res["avg_w"], res["np_w"], res["cv_1min"] * 100, w1, w2, h1, h2, res["decoupling_pct"], res["zero_s"]))
+        print("HR avg %.1f, max %.0f, last %d min %.1f (LTHR estimate), cadence %.0f" % (res["hr_avg"], res["hr_max"], lthr_last_s // 60, res["lthr_est"], res["cad"]))
+        for b in blocks: print("  %4.0f min  %5.1f W  HR %5.1f (end %5.1f)  cad %4.0f" % (b["start_min"], b["w"], b["hr"], b["hr_end"], b["cad"]))
+        if "other_avg_w" in res: print("other recording, same window: %.1f W (ratio %.3f); offset fit other = %.3f x ref %+.1f W" % (
+            res["other_avg_w"], res["other_avg_w"] / res["avg_w"], res["meter"]["fit"][0], res["meter"]["fit"][1]))
     return res
 
 
