@@ -137,8 +137,11 @@ def main():
         else: skip("C21 geometry (route export)", "20km uninterrupted GPX not found")
         c19 = g("*uninterrupted loop*")
         if c19:
-            lc = rt.loop_closure(c19)
-            check("C19: loop joins at km 5.3, 16.4 km, +23/-21 m", lc.get("closed") and abs(lc["join_km"] - 5.3) < 0.2 and abs(lc["loop_km"] - 16.4) < 0.2 and abs(lc["loop_asc"] - 23) < 3, "join km %.1f, loop %.1f km, +%.0f m" % (lc.get("join_km", 0), lc.get("loop_km", 0), lc.get("loop_asc", 0)))
+            lc = rt.loop_closure(c19); r19 = rt.analyse(c19)
+            if lc.get("join_km", 0) > 1:     # old file (until 9 Nov): 5.3 km approach + loop
+                check("C19 (old file): loop joins at km 5.3, 16.4 km, +23/-21 m", lc.get("closed") and abs(lc["join_km"] - 5.3) < 0.2 and abs(lc["loop_km"] - 16.4) < 0.2 and abs(lc["loop_asc"] - 23) < 3, "join km %.1f, loop %.1f km, +%.0f m" % (lc.get("join_km", 0), lc.get("loop_km", 0), lc.get("loop_asc", 0)))
+            else:                            # 9 Nov file: loop only, route export
+                check("C19: loop only, 16.5 km, closes, +23 m, 4 corners", lc.get("closed") and abs(lc["loop_km"] - 16.5) < 0.2 and abs(lc["loop_asc"] - 23) < 3 and len(r19["turns"]) == 4, "loop %.1f km, +%.0f m, %d turns" % (lc.get("loop_km", 0), lc.get("loop_asc", 0), len(r19["turns"])))
         else: skip("C19 loop closure", "uninterrupted loop GPX not found")
         v1 = g("*3316196558*")
         if v1:
