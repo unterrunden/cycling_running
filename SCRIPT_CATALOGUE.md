@@ -126,7 +126,7 @@ Counts: PORTED 29, SUPERSEDED 4, PATTERN 6, ONE-OFF 19, HOUSEKEEPING 26, DUPLICA
 ## 9 Nov (chat 2, Strava export of 9 Nov)
 - `cp_lib.make_history_digest` rewritten for outdoor vs virtual rides (indoor bests table from the VirtualRide bests, V marker in the weekly and per-ride tables, HR notes per ride, computed counts and no-power dates, automatic note when a longer duration beats a shorter one, section 8 "After the export"); `cp_lib.weekly_table_md` counts indoor rides (cp_lib v1.4).
 - `segments_tool.py` v1.3: `_from_fit_bytes` reads sport / sub_sport and `load_rides` skips indoor FITs (07_11_kickr.fit had been loaded as an outdoor ride on its virtual Belgian GPS); the stop flag shows the elapsed-based W, which is what Strava reports for an effort with an auto-paused stop.
-- `selfcheck.py`: digest-generator test on `tests/digest_*_09_11.csv`; indoor-FIT skip test (35 checks).
+- `selfcheck.py`: digest-generator test on `tests/09_11_digest_*.csv`; indoor-FIT skip test (35 checks).
 - Ad hoc: 191 bpm (29 Sep) confirmed as the highest strap HR in all files.
 
 ## Gotchas learned along the way (all handled in the library)
