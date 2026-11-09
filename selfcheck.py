@@ -187,8 +187,8 @@ def main():
     guarded(meters)
 
     def digest():
-        rc, uc = find("tests/digest_rides_09_11.csv"), find("tests/digest_runs_09_11.csv")
-        if not (rc and uc): skip("history digest generator", "tests/digest_*_09_11.csv not in the repo"); return
+        rc, uc = find("tests/09_11_digest_rides.csv"), find("tests/09_11_digest_runs.csv")
+        if not (rc and uc): skip("history digest generator", "tests/09_11_digest_*.csv not in the repo"); return
         out = os.path.join(tmp, "digest.md")
         virt = cp.parse_bests("8min=176@2026-11-04, 10min=177@2026-11-04")
         cp.make_history_digest(rc, uc, out, strava_now=cp.parse_bests("5s=686@2026-11-01, 20min=184@2026-11-01"), strava_virtual=virt,
