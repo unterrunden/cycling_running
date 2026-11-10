@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""cp_lib.py (v1.4, 2026-11-09) - reusable helpers for the 'cycling | running' coaching project.
+"""cp_lib.py (v1.5, 2026-11-10) - reusable helpers for the 'cycling | running' coaching project.
 
 Companion to analysis_tools.py (activity files -> reports / digest) and routes_tool.py (GPX route geometry).
 This module collects everything else that was written ad hoc during the chats:
@@ -675,6 +675,48 @@ def hour_test_report(path, other=None, dur=3600, block_s=300, lthr_last_s=1200, 
         if "other_avg_w" in res: print("other recording, same window: %.1f W (ratio %.3f); offset fit other = %.3f x ref %+.1f W" % (
             res["other_avg_w"], res["other_avg_w"] / res["avg_w"], res["meter"]["fit"][0], res["meter"]["fit"][1]))
     return res
+
+
+def aerobic_check(path, targets=(130, 150), tol=10.0, min_s=(1200, 600), last_s=(600, 300), lag_s=180, other=None, show=True):
+    """Aerobic check (progress check for goal a, every second week): 20 min at 130 W, then 10 min at 150 W, inside the Z2 part of a ride
+    (KICKR, fan, usual room). `path` = FIT path or a fit_series()/stream_series() dict. For each target, finds the longest stretch whose
+    30-s mean power stays within +-`tol` W of it; reports length, avg W, the HR of the last `last_s` seconds (the logged value), HR drift
+    (first vs last third after `lag_s` s of HR lag), W/HR and cadence. With `other` (a second recording of the same ride, e.g. the Edge
+    with the Stages) also the other meter's ratio on the same stretches (meter check). Returns a list of dicts (one per target)."""
+    s = fit_series(path) if isinstance(path, str) else path; t0, P, H, C = _series_1hz(s)
+    r30 = np.convolve(P, np.ones(30) / 30, "same"); out = []
+    o = None
+    if other is not None:
+        o = fit_series(other) if isinstance(other, str) else other
+        mo = meter_offset(s, o, show=False); to, Po, Ho, Co = _series_1hz(o)
+    for k, tw in enumerate(targets):
+        ok = (np.abs(r30 - tw) <= tol) & (P > 0); best = (0, 0); i = 0
+        while i < len(ok):
+            if ok[i]:
+                j = i
+                while j < len(ok) and ok[j]: j += 1
+                if j - i > best[1] - best[0]: best = (i, j)
+                i = j
+            else: i += 1
+        a, b = best; n = b - a; need = min_s[k] if k < len(min_s) else min_s[-1]; ls = last_s[k] if k < len(last_s) else last_s[-1]
+        if n < 0.75 * need:
+            out.append(dict(target_w=tw, found=False, length_s=int(n), need_s=int(0.75 * need))); continue
+        h = H[a:b]; tail = slice(max(a, b - ls), b); hh = H[a + min(lag_s, n // 3):b]; third = max(1, len(hh) // 3)
+        res = dict(target_w=tw, found=True, start_min=a / 60, length_s=int(n), avg_w=float(P[a:b].mean()), w_last=float(P[tail].mean()),
+                   hr_last=float(np.nanmean(H[tail])), hr_avg=float(np.nanmean(h)), hr_drift=float(np.nanmean(hh[-third:]) - np.nanmean(hh[:third])),
+                   cad=float(np.nanmean(C[a:b][C[a:b] > 0])) if (C[a:b] > 0).any() else np.nan, short=bool(n < 0.95 * need))
+        res["w_per_hr"] = res["w_last"] / res["hr_last"] if res["hr_last"] > 0 else np.nan
+        if o is not None:
+            x = int(t0 + a - mo["lag_s"] - to); y = x + n
+            if 0 <= x and y <= len(Po): res["other_w"] = float(Po[x:y].mean()); res["other_ratio"] = res["other_w"] / res["avg_w"]
+        out.append(res)
+    if show:
+        for r in out:
+            if not r["found"]: print("%d W: no stretch of at least %d s found (longest %d s)" % (r["target_w"], r["need_s"], r["length_s"])); continue
+            print("%d W: from min %.1f, %.1f min, avg %.1f W, last part %.1f W at HR %.1f (W/HR %.3f), drift %+.1f bpm, cadence %.0f%s%s" % (
+                r["target_w"], r["start_min"], r["length_s"] / 60, r["avg_w"], r["w_last"], r["hr_last"], r["w_per_hr"], r["hr_drift"], r["cad"],
+                " (shorter than planned)" if r["short"] else "", ", other meter %.1f W (ratio %.3f)" % (r["other_w"], r["other_ratio"]) if "other_w" in r else ""))
+    return out
 
 
 def fourdp_report(path, show=True):
