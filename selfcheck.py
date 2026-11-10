@@ -4,8 +4,8 @@
 Run in a fresh chat after cloning the repo:   pip install fitparse scipy pandas --break-system-packages ; python3 selfcheck.py
 It reproduces numbers that were validated against Strava / the chats (20 Sep ride, 22 Sep hour, route geometry, C19 loop, 5K trial, 4DP ...),
 so a silent bug introduced by a script change shows up as FAIL. SKIP = the needed data file is not in the repo.
-Data (repo folder, data/ or tests/): the newest strava_export_<dd_mm>.zip, every all_routes_*.zip / rides_runs_gpx_files_*.zip (zips can be
-replaced by newer ones with the same name pattern); optional: tests/28_10.fit (28 Oct 5K) and tests/01_11.fit (1 Nov 4DP).
+Data (repo folder, data/ or tests/): the newest strava_export_<dd_mm>.zip, every all_routes_*.zip (zips can be replaced by
+newer ones with the same name pattern) and the files in tests/ (dd_mm_<name>: FITs, streams and digest CSVs; see README.md).
 """
 import os, sys, glob, zipfile, tempfile, traceback
 from datetime import date
@@ -115,7 +115,7 @@ def main():
     if csv: guarded(rides)
     else: skip("ride tests (20/22/19 Sep)", "no strava_export_*.zip found")
 
-    route_zips = find_all("all_routes_*.zip") + find_all("rides_runs_gpx_files_*.zip")
+    route_zips = find_all("all_routes_*.zip")
     for k, z in enumerate(route_zips):
         zipfile.ZipFile(z).extractall(os.path.join(tmp, "gpx", str(k)))
 
@@ -124,7 +124,7 @@ def main():
         return hits[0] if hits else None
 
     def routes():
-        if not route_zips: return skip("route tests", "no all_routes_*.zip / rides_runs_gpx_files_*.zip found")
+        if not route_zips: return skip("route tests", "no all_routes_*.zip found")
         c2 = g("*15km uninterrupted - komoot*")
         if c2:
             r = rt.analyse(c2); st = rt.stretches(r, by_length=True)
@@ -138,20 +138,17 @@ def main():
         c19 = g("*uninterrupted loop*")
         if c19:
             lc = rt.loop_closure(c19); r19 = rt.analyse(c19)
-            if lc.get("join_km", 0) > 1:     # old file (until 9 Nov): 5.3 km approach + loop
-                check("C19 (old file): loop joins at km 5.3, 16.4 km, +23/-21 m", lc.get("closed") and abs(lc["join_km"] - 5.3) < 0.2 and abs(lc["loop_km"] - 16.4) < 0.2 and abs(lc["loop_asc"] - 23) < 3, "join km %.1f, loop %.1f km, +%.0f m" % (lc.get("join_km", 0), lc.get("loop_km", 0), lc.get("loop_asc", 0)))
-            else:                            # 9 Nov file: loop only, route export
-                check("C19: loop only, 16.5 km, closes, +23 m, 4 corners", lc.get("closed") and abs(lc["loop_km"] - 16.5) < 0.2 and abs(lc["loop_asc"] - 23) < 3 and len(r19["turns"]) == 4, "loop %.1f km, +%.0f m, %d turns" % (lc.get("loop_km", 0), lc.get("loop_asc", 0), len(r19["turns"])))
+            check("C19: loop only, 16.5 km, closes, +23 m, 4 corners", lc.get("closed") and abs(lc["loop_km"] - 16.5) < 0.2 and abs(lc["loop_asc"] - 23) < 3 and len(r19["turns"]) == 4, "loop %.1f km, +%.0f m, %d turns" % (lc.get("loop_km", 0), lc.get("loop_asc", 0), len(r19["turns"])))
         else: skip("C19 loop closure", "uninterrupted loop GPX not found")
-        v1 = g("*3316196558*")
-        if v1:
-            r0 = rt.analyse(v1); r1 = rt.analyse(v1, merge_km=0.35)
-            check("old 4dp v1: 19 raw / 17 merged turns, +152/-162 m", len(r0["turns"]) == 19 and len(r1["turns"]) == 17 and abs(r0["asc"] - 152) < 6 and abs(r0["dsc"] - 162) < 6, "%d / %d turns, +%.0f/-%.0f" % (len(r0["turns"]), len(r1["turns"]), r0["asc"], r0["dsc"]))
-        else: skip("old 4dp v1 (merge rule, smoothing)", "v1 GPX no longer in the repo (optional)")
+        c1 = g("4dp v2.gpx")
+        if c1:
+            r0 = rt.analyse(c1); r1 = rt.analyse(c1, merge_km=0.35)
+            check("C1 (4dp v2): 55.1 km, 28 raw / 17 merged turns, +166/-168 m (merge rule, smoothing)", abs(r0["km"] - 55.1) < 0.2 and len(r0["turns"]) == 28 and len(r1["turns"]) == 17 and abs(r0["asc"] - 166) < 6 and abs(r0["dsc"] - 168) < 6, "%.1f km, %d / %d turns, +%.0f/-%.0f" % (r0["km"], len(r0["turns"]), len(r1["turns"]), r0["asc"], r0["dsc"]))
+        else: skip("C1 geometry (merge rule, smoothing)", "4dp v2.gpx not found in the routes zip")
     guarded(routes)
 
     def run5k():
-        f = find("28_10.fit", "5k_28oct.fit", "30_10.fit")
+        f = find("28_10.fit")
         if not f: return skip("5K trial tests", "tests/28_10.fit not in the repo (optional)")
         r = cp.run_finish_report(f, show=False); sp = [round(s["time_s"] * 1000 / (s["to_m"] - s["from_m"])) for s in r["splits"]]
         check("5K 28 Oct: km splits 5:04 4:57 4:51 4:35 4:03", all(abs(x - y) <= 1 for x, y in zip(sp, [304, 297, 291, 275, 243])), str([cp.fmt_t(x) for x in sp]))
@@ -160,7 +157,7 @@ def main():
     guarded(run5k)
 
     def fourdp():
-        f = find("01_11.fit", "4dp_01_11.fit")
+        f = find("01_11.fit")
         if not f: return skip("4DP report (1 Nov)", "tests/01_11.fit not in the repo (optional)")
         r = cp.fourdp_report(f, show=False); b = r["blocks"]; sp = r["sprints"]
         check("4DP 1 Nov: 5 min 230.8 W, 20 min 183.9 W, 1 min 312.0 W (best windows)", abs(b["5min"]["avg_w"] - 230.8) < 0.5 and abs(b["20min"]["avg_w"] - 183.9) < 0.5 and abs(b["1min"]["avg_w"] - 312.0) < 0.5, "%.1f / %.1f / %.1f W" % (b["5min"]["avg_w"], b["20min"]["avg_w"], b["1min"]["avg_w"]))
@@ -199,6 +196,21 @@ def main():
               "| 20min | 184 | 01 Nov | 184 | 01 Nov |" in t, t.startswith("# History digest: Pat, cycling | running\n")]
         check("history digest (9 Nov CSVs): outdoor/virtual split 46/6, indoor bests with inversion note, V markers, bests table", all(ok), str(ok))
     guarded(digest)
+
+    def aerobic():
+        import numpy as np
+        rng = np.random.default_rng(1); p = []; h = []
+        for n, w, hr in [(600, 110, 125), (1200, 130, 140), (600, 150, 150), (300, 110, 140), (900, 175, 165), (600, 100, 135)]:
+            p += list(w + rng.normal(0, 4, n)); h += list(np.linspace(h[-1] if h else 120, hr, n))
+        t = 1.7e9 + np.arange(len(p)); ser = dict(t=t, p=np.array(p), hr=np.array(h), cad=np.full(len(p), 88.0))
+        o = dict(t=t + 3, p=np.array(p) * 1.04, hr=np.array(h), cad=np.full(len(p), 88.0))
+        r = cp.aerobic_check(ser, other=o, show=False)
+        ok = [r[0]["found"] and abs(r[0]["length_s"] - 1200) <= 30 and abs(r[0]["hr_last"] - 136.25) < 0.5, r[1]["found"] and abs(r[1]["avg_w"] - 150) < 1,
+              abs(r[0].get("other_ratio", 0) - 1.04) < 0.005, not r[0]["short"]]
+        f = find("tests/07_11_kickr.fit")
+        if f: ok.append(not cp.aerobic_check(f, show=False)[0]["found"])      # hilly 7 Nov ride: no steady 130 W block
+        check("aerobic_check: finds the 130 W / 150 W blocks, HR of the last 10 min, meter ratio; none on a hilly ride", all(ok), str(ok))
+    guarded(aerobic)
 
     def virtual_fit_skip():
         import segments_tool as st
