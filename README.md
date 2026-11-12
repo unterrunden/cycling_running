@@ -8,7 +8,7 @@ The repo is public and the sandbox can clone it. Claude cannot push to GitHub: n
 ```sh
 git clone --depth 1 https://github.com/unterrunden/cycling_running repo && cd repo
 pip install fitparse scipy pandas --break-system-packages -q
-python3 selfcheck.py        # 37 checks (under 1 min): every PASS = the toolkit still reproduces the validated numbers
+python3 selfcheck.py        # 39 checks (under 1 min): every PASS = the toolkit still reproduces the validated numbers
 ```
 
 Data in the repo: the newest `strava_export_<dd_mm>.zip` (full Strava export: `activities.csv`, the activity files and `routes/`) and `all_routes_<dd_mm>.zip` (route GPX files). Segments: `segments.json` (definitions + reference lines) and `segments_archive.csv` (every effort, rebuilt by `segments_tool.py`). Optional test files: `tests/28_10.fit` (28 Oct 5K), `tests/01_11.fit` (1 Nov 4DP), `tests/06_11_stages_series.json` + `tests/06_11_kickr_streams.json` (6 Nov KICKR vs Stages, no GPS), `tests/07_11_garmin.fit` + `tests/07_11_kickr.fit` (7 Nov, both recordings at 1 Hz; Edge indoors without GPS, MyWhoosh virtual coordinates), `tests/09_11_digest_rides.csv` + `tests/09_11_digest_runs.csv` (digest CSVs of the 9 Nov export, for the digest-generator test).
@@ -40,7 +40,7 @@ Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded
 - 60-min FTP test (or any long test): `cp.hour_test_report(edge_fit, other=kickr_fit)` (best window, 5-min blocks, halves, decoupling, LTHR estimate = HR of the last 20 min, KICKR vs Stages on the same window).
 - HR quality and zones: `cp.hr_artefact_scan(tl)` (minute ranges where HR cannot match the power: 200 W / 45 s and 150 W / 2 min tiers), `cp.hr_gaps(tl)` (missing HR while riding; Strava draws it as a frozen line); `w = cp.hr_power_windows(tl)` per ride, stacked → `cp.hr_zone_score(w, [133, 148, 162, 173], ftp)` / `cp.hr_zone_optimise(w, ftp)`.
 - Progress checks (coach_notes.md section 7): aerobic check `cp.aerobic_check(kickr_fit, other=edge_fit)` (20 min at 130 W + 10 min at 150 W: HR of the last 10 / 5 min, drift, W/HR, meter ratio); long-ride durability `cp.ride_session(f)` (decoupling); run pace and HR per lap `cp.split_table(cp.run_series(f), 1265)`.
-- Two power meters at once (KICKR vs Stages): `cp.meter_offset(cp.fit_series(edge_fit), cp.fit_series(kickr_fit))` (aligns by HR, power-band table, linear fit); a stream instead of a FIT: `cp.stream_series(streams, '2026-11-06T15:51:40')`.
+- Two power meters at once (KICKR vs Stages): `cp.meter_offset(cp.fit_series(edge_fit), cp.fit_series(kickr_fit), align="power")` (v1.6: align by power for MyWhoosh files, whose HR runs about 4 s late; `mask=[(from_epoch, to_epoch)]` drops broken stretches; default align by HR as before; compare blocks by their averages, the band table is biased next to ERG targets; power-band table, linear fit); a stream instead of a FIT: `cp.stream_series(streams, '2026-11-06T15:51:40')`.
 - Edit markdown safely: `p = cp.Patch('coach_notes.md'); p.rep(old, new, 'tag'); p.insert_after('- [stated] ...', new); p.save('out.md')` (refuses to save if any target is missing).
 
 ## Conventions
@@ -57,7 +57,7 @@ Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded
 - Trainer rides are a separate Strava sport (VirtualRide) with their own best efforts; trainer HR without a strong fan is inflated.
 - HR lags 30-90 s: genuine 45-s efforts at 200+ W can average 128-142 bpm; judge strap artefacts by the HR at the end of an effort (or falling HR), not by the average.
 - The Strava connector returns the run/default HR zones (<130/160/175/190), not the cycling set kept in the app.
-- MyWhoosh start times can be off (51 s on 6 Nov): align by HR (`cp.meter_offset`). Edge 540 HRV messages hold some junk RR values (6-58 s), now ignored. An Edge recording indoors with GPS on draws a scribble and uploads a 0.1 km outdoor "Ride" to Strava: use an indoor profile and delete the duplicate.
+- MyWhoosh start times can be off (51 s on 6 Nov): align by cross-correlation (`cp.meter_offset`; by power since 11 Nov: MyWhoosh's Bluetooth HR runs about 4 s behind the Edge's ANT+ HR). Edge 540 HRV messages hold some junk RR values (6-58 s), now ignored. An Edge recording indoors with GPS on draws a scribble and uploads a 0.1 km outdoor "Ride" to Strava: use an indoor profile and delete the duplicate.
 - MyWhoosh FITs carry virtual GPS (sub_sport `virtual_activity`), the Edge indoors records `indoor_cycling`: outdoor tools (segments) skip both.
 - Strava segment power with an auto-paused stop inside the effort counts the stop as 0 W (= the elapsed-based value; 31 Oct, 67 s stop: 147 vs 157 W over recorded samples).
 - A best-effort curve can rise with duration (4 Nov: 10 min 177 W > 8 min 176 W): harder stretches at both ends of the window, not an error.
