@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""cp_lib.py (v1.9, 2026-11-12) - reusable helpers for the 'cycling | running' coaching project.
+"""cp_lib.py (v1.11, 2026-11-12) - reusable helpers for the 'cycling | running' coaching project.
 
 Companion to analysis_tools.py (activity files -> reports / digest) and routes_tool.py (GPX route geometry).
 This module collects everything else that was written ad hoc during the chats:
@@ -10,6 +10,7 @@ This module collects everything else that was written ad hoc during the chats:
   RIDE       10-min block tables, best windows (power, HR, distance, speed), decoupling, HR by power, effort finder
   RUN        splits, halves, tail paces, fastest windows (reps), HR plateaus / steps / zone time, loop length
   TESTS      4DP / Full Frontal report (sprints with a physics check, blocks, gaps, strap quality)
+  W' / CP    W' balance (Skiba integral and differential), W' needed by a ride, power-duration fits (2P CP, Morton 3P)
   CSV/DIGEST Strava activities.csv loader, weekly table, bests table, history_digest.md generator
 Needs numpy; pandas (CSV/DIGEST); scipy (PHYSICS); fitparse (FIT; pip install fitparse --break-system-packages).
 Usage:  import cp_lib as cp ; cp.speed_from_power(185, 0.004) ; python3 cp_lib.py --index   (prints the function index)
@@ -21,7 +22,7 @@ from datetime import datetime, timezone, date as _date
 import numpy as np
 
 # ----------------------------------------------------------------------------- CONFIG
-CFG = dict(ftp=180.0,                                                 # working FTP (W) until the 60-min trainer test
+CFG = dict(ftp=175.0,                                                 # planning FTP (W) from the 60-min trainer test of 12 Nov (Stages 175.1, KICKR 175.4); 180 W working value before
            z2cap=135.0, tz="Europe/Berlin", home=(50.8438, 6.8942), sun_site=(50.94, 6.96),
            mass=68.0, cda=0.38, crr=0.005, rho=1.22, eta=0.98,           # rider 56 kg (Pat 12 Nov, measured; 60 kg before) + bike 10.1 + kit ~2 = 68 kg (72 until v1.7); hoods, cool autumn air
            ride_hr_zones=(132, 148, 162, 177), run_hr_zones=(130, 160, 175, 190),   # cycling Z1-Z4 upper edges (Pat 8 Nov; was 125/150/170/182), Strava run set
@@ -699,7 +700,8 @@ def hour_test_report(path, other=None, dur=3600, block_s=300, lthr_last_s=1200, 
     ride (`other`, e.g. the MyWhoosh/KICKR FIT): best `dur` window (elapsed: pauses count as 0 W), per-block W / HR / cadence, halves,
     pacing CV of 1-min means, Pw:HR decoupling, HR drift, LTHR estimate = average HR of the last `lthr_last_s` seconds (Friel), NP;
     with `other`: its average over the same (aligned; align="power" by default since v1.6, see meter_offset) window and the meter_offset
-    table. Returns a dict."""
+    table. 12 Nov 2026 (the planning-FTP test): 175.1 W Stages (KICKR 175.4 W, ratio 1.002), halves 174.5 / 175.8 W, decoupling +1.2%,
+    LTHR estimate 173.2 (HR min 15-50 flat at 171.7-172.7). Returns a dict."""
     s = fit_series(path); t0, P, H, C = _series_1hz(s)
     if len(P) < dur: raise ValueError("file shorter than %d s" % dur)
     c = np.convolve(P, np.ones(dur) / dur, "valid"); i = int(np.argmax(c)); w = slice(i, i + dur)
@@ -813,6 +815,59 @@ def fourdp_report(path, show=True):
         if strap: print("strap: %s; flagged minutes %s" % (strap["summary"], strap["flagged_minutes"]))
         print("FTP by the 4DP rule (100%% of the 20 min): %.0f W" % res["ftp_4dp"])
     return res
+
+
+# ----------------------------------------------------------------------------- W' / CP
+def wbal(P, cp=None, wprime=18000.0, model="integral"):
+    """W' balance (J) per second of a 1 Hz power series. model="integral": Skiba 2012 (tau = 546*exp(-0.01*DCP) + 316 s, DCP = CP minus
+    the mean power of the seconds below CP over the whole series; reportedly what intervals.icu uses, with the activity FTP as CP);
+    model="differential": Skiba 2015 / Froncioni-Clarke (below CP W' refills at (CP - P) * (W' - W'bal) / W'). cp defaults to CFG['ftp'].
+    Returns (array W'bal, tau or None). 12 Nov: W' 18 kJ with CP 175 W leaves about 2.8 kJ at the end of the 1 Nov 4DP 20 min (integral)."""
+    cp = cp or CFG["ftp"]; P = np.nan_to_num(np.asarray(P, float)); out = np.empty(len(P))
+    if model == "integral":
+        below = P[P < cp]; dcp = cp - below.mean() if len(below) else 0.0
+        tau = 546 * np.exp(-0.01 * dcp) + 316; k = np.exp(-1 / tau); S = 0.0
+        for i, x in enumerate(P): S = S * k + max(0.0, x - cp); out[i] = wprime - S
+        return out, tau
+    b = wprime
+    for i, x in enumerate(P):
+        b = b - (x - cp) if x > cp else b + (cp - x) * (wprime - b) / wprime; out[i] = b
+    return out, None
+
+
+def wprime_needed(P, cp=None):
+    """Smallest W' (J) that keeps W'bal >= 0 over a power series, for both W'bal models: dict(integral, at_s, tau, differential). In a truly
+    all-out effort to exhaustion W'bal should end near 0, so this is a lower bound for W' (given CP); repeated interval sessions overstate it
+    (the models under-predict recovery between efforts). 12 Nov, CP 175: 1 Nov 4DP 15.2 / 17.5 kJ, 2 Oct 16.9 / 20.4, 27 Sep 15.6 / 18.8."""
+    cp = cp or CFG["ftp"]; P = np.nan_to_num(np.asarray(P, float))
+    w, tau = wbal(P, cp, 0.0, "integral"); i = int(np.argmin(w))
+    def mn(W): return wbal(P, cp, W, "differential")[0].min()
+    lo, hi = 1000.0, 80000.0
+    if mn(hi) < 0: dif = float("inf")
+    else:
+        for _ in range(30):
+            mid = (lo + hi) / 2; lo, hi = (mid, hi) if mn(mid) < 0 else (lo, mid)
+        dif = hi
+    return dict(integral=float(-w[i]), at_s=i, tau=float(tau), differential=float(dif))
+
+
+def pd_fit(bests, model="2p", lo=120, hi=900, cp=None):
+    """Power-duration model fit to best efforts {seconds: watts}. model="2p": CP and W' from work = CP*t + W' over lo..hi s (cp given: only
+    W', least squares on P - CP = W'/t); model="morton": Morton 3P, P = W'/(t - k) + CP with k = W'/(CP - Pmax), fitted to durations <= hi.
+    Returns dict(cp, wprime, pmax). 12 Nov (Stages bests): 2P 2-15 min CP 172 W / W' 15.2 kJ; CP fixed 175: W' 13.6 kJ; Morton 3P (5 s-20 min)
+    CP 183 W / W' 12.0 kJ / Pmax 813 W, but its 60-min power (186 W) overshoots the measured 175 W, so the mid-length bests are not maximal."""
+    t = np.array(sorted(bests), float); p = np.array([bests[k] for k in sorted(bests)], float)
+    if model == "morton":
+        from scipy.optimize import curve_fit
+        m = t <= hi
+        f = lambda t, CP, W, Pm: W / (t - W / (CP - Pm)) + CP
+        (c, W, Pm), _ = curve_fit(f, t[m], p[m], p0=(175, 18000, 800), maxfev=20000)
+        return dict(cp=float(c), wprime=float(W), pmax=float(Pm))
+    m = (t >= lo) & (t <= hi)
+    if cp is not None:
+        W = np.linalg.lstsq((1 / t[m])[:, None], p[m] - cp, rcond=None)[0][0]; return dict(cp=float(cp), wprime=float(W), pmax=None)
+    c, W = np.linalg.lstsq(np.vstack([t[m], np.ones(m.sum())]).T, p[m] * t[m], rcond=None)[0]
+    return dict(cp=float(c), wprime=float(W), pmax=None)
 
 
 # ----------------------------------------------------------------------------- CSV / DIGEST

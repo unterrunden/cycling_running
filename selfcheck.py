@@ -250,6 +250,27 @@ def main():
         check("analysis_tools CLI on the 4DP file: runs, FTP default taken from cp_lib.CFG (%.0f W)" % cp.CFG["ftp"], ("At FTP %d W" % cp.CFG["ftp"]) in out, out[:0])
     guarded(cli)
 
+    def hour_test():
+        g12, k12 = find("tests/12_11_garmin.fit"), find("tests/12_11_kickr.fit")
+        if not (g12 and k12): return skip("hour test 12 Nov", "tests/12_11_*.fit not in the repo (optional)")
+        h = cp.hour_test_report(g12, other=k12, show=False)
+        check("hour test 12 Nov: 175.1 W Stages, KICKR ratio 1.00, LTHR estimate 173.2, decoupling about +1%",
+              abs(h["avg_w"] - 175.1) < 0.2 and abs(h["other_avg_w"] / h["avg_w"] - 1.0) < 0.01 and abs(h["lthr_est"] - 173.2) < 0.3 and 0 < h["decoupling_pct"] < 2.5,
+              "%.1f W, ratio %.3f, LTHR %.1f, decoupling %+.1f%%" % (h["avg_w"], h["other_avg_w"] / h["avg_w"], h["lthr_est"], h["decoupling_pct"]))
+    guarded(hour_test)
+
+    def wprime():
+        f = find("tests/01_11.fit")
+        if not f: return skip("W' tools", "tests/01_11.fit not in the repo (optional)")
+        a, ex, tl = cp.load_activity(f); P = np.nan_to_num(tl["P"])
+        n = cp.wprime_needed(P, 175); w, tau = cp.wbal(P, 175, 18000, "integral")
+        fit = cp.pd_fit({120: 279.3, 180: 257.7, 300: 230.8, 480: 202.5, 600: 202.2, 900: 187.4, 1200: 183.9})
+        check("W' tools on the 1 Nov 4DP (CP 175): needed 15.2 / 17.5 kJ (integral / differential), 18 kJ leaves 2.8 kJ after the 5 min; 2P fit CP 172 W / W' 15.2 kJ",
+              abs(n["integral"] - 15160) < 100 and abs(n["differential"] - 17530) < 150 and abs(w.min() - 2840) < 100 and abs(np.argmin(w) / 60 - 50.5) < 0.3
+              and abs(fit["cp"] - 172.4) < 0.2 and abs(fit["wprime"] - 15240) < 100,
+              "needed %.1f / %.1f kJ, min %.1f kJ at min %.1f, fit %.1f W / %.1f kJ" % (n["integral"] / 1000, n["differential"] / 1000, w.min() / 1000, np.argmin(w) / 60, fit["cp"], fit["wprime"] / 1000))
+    guarded(wprime)
+
     def virtual_fit_skip():
         import segments_tool as st
         fs = [find("tests/07_11_kickr.fit"), find("tests/07_11_garmin.fit")]

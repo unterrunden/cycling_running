@@ -8,7 +8,7 @@ The repo is public and the sandbox can clone it. Claude cannot push to GitHub: n
 ```sh
 git clone --depth 1 https://github.com/unterrunden/cycling_running repo && cd repo
 pip install fitparse scipy pandas --break-system-packages -q
-python3 selfcheck.py        # 42 checks (under 1 min): every PASS = the toolkit still reproduces the validated numbers
+python3 selfcheck.py        # 44 checks (under 1 min): every PASS = the toolkit still reproduces the validated numbers
 ```
 Then check that the data list below names every file in `tests/`; add missing ones to the next handover. The FTP lives in one place: `cp_lib.CFG['ftp']` (the CLI and all reports read it); after a test that sets a new planning FTP, change only that value.
 
@@ -24,6 +24,7 @@ Data in the repo:
   - 7 Nov: `07_11_garmin.fit` + `07_11_kickr.fit` (both recordings at 1 Hz; Edge indoors without GPS, MyWhoosh virtual coordinates)
   - 9 Nov: `09_11_digest_rides.csv` + `09_11_digest_runs.csv` (digest CSVs of the 9 Nov export, for the digest-generator test)
   - 11 Nov: `11_11_garmin.fit` + `11_11_kickr.fit` (trainer ride with aerobic check 0, sprints and the pulled KICKR cable at Edge min 61.3-63.6; HR max 194)
+  - 12 Nov: `12_11_garmin.fit` + `12_11_kickr.fit` (60-min FTP test on the trainer, test part only: 175.1 / 175.4 W; sets CFG ftp = 175)
 - New test files are listed here when they are added (Claude includes it in the handover).
 
 Project docs: `docs/` holds the newest versions of the five Project docs (coach_notes.md, project_memory_mirror.md, history_digest.md, routes_and_courses.md, segments.md = `claude/segments.md` in the Project), uploaded by Pat after each update; the Project copy wins if they differ (compare the date in the first line).
@@ -43,6 +44,7 @@ Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded
 
 ## Cookbook (task → command; `import cp_lib as cp, routes_tool as rt`)
 - First look at any FIT: `cp.fit_inspect(f)`. Lap-button blocks, pauses, strap: `cp.fit_laps(f)`, `cp.fit_pauses(f)`, `cp.fit_events(f)`, `cp.hrv_quality(f)`; a new max HR against clean beats: `cp.hr_peak_clean(f)`.
+- W' for intervals.icu (which uses the activity FTP as CP): `cp.wprime_needed(P, 175)` per hard ride, `cp.wbal(P, 175, 18000)` for the curve, `cp.pd_fit(bests)` / `pd_fit(bests, model='morton')` for CP models; 12 Nov choice 18 kJ (coach_notes.md section 3).
 - Ride report: `python3 analysis_tools.py f.fit` (FTP from `cp_lib.CFG`; `--ftp N` overrides); session view (blocks, best windows with HR and speed, decoupling, efforts): `cp.ride_session(f)`.
 - 4DP / Full Frontal: `cp.fourdp_report(f)` (sprints with a physics check, per-minute blocks, gaps with stopped time, strap quality, FTP by the 4DP rule).
 - Window / block detail: `a, ex, tl = cp.load_activity(f)`; `cp.best_window(tl, 1200, 'elapsed')`; `cp.ride_blocks(tl, 10)`.
@@ -147,6 +149,11 @@ Claude hands over the changed files, Pat commits them, then `python3 selfcheck.p
 - `hour_test_report`: Analyse a long all-out test (default the 60-min FTP test) from one FIT (e.g. Edge/Stages), optionally a second recording of the same ride (`other`, e.g. the MyWhoosh/KICKR FIT): best `dur` window (elapsed: pauses count as 0 W), per-block W / HR / cadence, halves, pacing CV of 1-min means, Pw:HR decoupling, HR drift, LTHR estimate = average HR of the last `lthr_last_s` seconds (Friel), NP; with `other`: its average over the same (aligned; align="power" by default since v1.6, see meter_offset) window and the meter_offset table.
 - `aerobic_check`: Aerobic check (progress check for goal a, every second week): 20 min at 130 W, then 10 min at 150 W, inside the Z2 part of a ride (KICKR, fan, usual room).
 - `fourdp_report`: Analyse a 4DP / Full Frontal file (two 5-s sprints, 5 min, 20 min, 1 min, in that order) without laps or manual input.
+
+### W' / CP
+- `wbal`: W' balance (J) per second of a 1 Hz power series.
+- `wprime_needed`: Smallest W' (J) that keeps W'bal >= 0 over a power series, for both W'bal models: dict(integral, at_s, tau, differential).
+- `pd_fit`: Power-duration model fit to best efforts {seconds: watts}.
 
 ### CSV / DIGEST
 - `load_activities_csv`: Strava export activities.csv -> clean DataFrame (pandas renames the duplicate headers 'Elapsed Time.1', 'Distance.1', 'Max Heart Rate.1', 'Relative Effort.1'; the .1 versions are the numeric ones in seconds / metres).
