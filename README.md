@@ -8,9 +8,9 @@ The repo is public and the sandbox can clone it. Claude cannot push to GitHub: n
 ```sh
 git clone --depth 1 https://github.com/unterrunden/cycling_running repo && cd repo
 pip install fitparse scipy pandas --break-system-packages -q
-python3 selfcheck.py        # 41 checks (under 1 min): every PASS = the toolkit still reproduces the validated numbers
+python3 selfcheck.py        # 42 checks (under 1 min): every PASS = the toolkit still reproduces the validated numbers
 ```
-Then check that the data list below names every file in `tests/`; add missing ones to the next handover.
+Then check that the data list below names every file in `tests/`; add missing ones to the next handover. The FTP lives in one place: `cp_lib.CFG['ftp']` (the CLI and all reports read it); after a test that sets a new planning FTP, change only that value.
 
 Data in the repo:
 - `strava_export_<dd_mm>.zip`: the newest full Strava export (`activities.csv`, the activity files and `routes/`); selfcheck picks the newest.
@@ -33,7 +33,7 @@ Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded
 ## Files
 | File | Purpose |
 |---|---|
-| `analysis_tools.py` | v2 CLI: one GPX / FIT / FIT.GZ activity → ride report (elapsed-based and stops-excluded power curves up to 180 min, NP, zones, cadence, HR) or run report (splits, laps, HR at pace); `--batch` → digest CSVs |
+| `analysis_tools.py` | v2.1 CLI (FTP and easy cap default to `cp_lib.CFG`, run laps to 1265 m): one GPX / FIT / FIT.GZ activity → ride report (elapsed-based and stops-excluded power curves up to 180 min, NP, zones, cadence, HR) or run report (splits, laps, HR at pace); `--batch` → digest CSVs |
 | `routes_tool.py` | v2: GPX route geometry from komoot track exports (`<trkpt>`) and route exports (`<rtept>`): distance, ascent, sharp turns (with merge option), stretches and headings, moderate bends, loop closure, comparison, markdown entries |
 | `cp_lib.py` | Everything else: physics (power / speed / wind, CP sketches), sun times, FIT inspection (laps, pauses, HRV / strap quality), ride blocks and windows, run trial tools, 4DP report, CSV and digest generator, safe markdown patcher |
 | `segments_tool.py` | v1.3: Strava segments without a segment API: fingerprint a PR effort in the ride files, reference lines, every effort of every segment (time, W, cadence, HR, stops) → `segments_archive.csv` (tracked efforts only: elapsed-based power >= 80% of the PR power) and the tables of the `claude/segments.md` Project doc; HR artefact check, rides with unusable HR; indoor FITs (MyWhoosh virtual GPS, Edge indoor profile) are skipped |
@@ -43,7 +43,7 @@ Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded
 
 ## Cookbook (task → command; `import cp_lib as cp, routes_tool as rt`)
 - First look at any FIT: `cp.fit_inspect(f)`. Lap-button blocks, pauses, strap: `cp.fit_laps(f)`, `cp.fit_pauses(f)`, `cp.fit_events(f)`, `cp.hrv_quality(f)`; a new max HR against clean beats: `cp.hr_peak_clean(f)`.
-- Ride report: `python3 analysis_tools.py f.fit --ftp 175`; session view (blocks, best windows with HR and speed, decoupling, efforts): `cp.ride_session(f)`.
+- Ride report: `python3 analysis_tools.py f.fit` (FTP from `cp_lib.CFG`; `--ftp N` overrides); session view (blocks, best windows with HR and speed, decoupling, efforts): `cp.ride_session(f)`.
 - 4DP / Full Frontal: `cp.fourdp_report(f)` (sprints with a physics check, per-minute blocks, gaps with stopped time, strap quality, FTP by the 4DP rule).
 - Window / block detail: `a, ex, tl = cp.load_activity(f)`; `cp.best_window(tl, 1200, 'elapsed')`; `cp.ride_blocks(tl, 10)`.
 - Run trial: `cp.run_finish_report(f)`; reps: `rs = cp.run_series(f)`; `cp.fastest_windows(rs, 240, 3)`; `cp.split_table(rs, 500)`.

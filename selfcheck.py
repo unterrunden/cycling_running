@@ -242,6 +242,14 @@ def main():
         check("normalize_md: CRLF, blank lines with a space, blank line before headings (not inside code fences)", cp.normalize_md(raw) == want)
     guarded(peak_and_docs)
 
+    def cli():
+        import subprocess
+        f = find("tests/01_11.fit")
+        if not f: return skip("analysis_tools CLI", "tests/01_11.fit not in the repo (optional)")
+        out = subprocess.run([sys.executable, os.path.join(HERE, "analysis_tools.py"), f], capture_output=True, text=True, timeout=300).stdout
+        check("analysis_tools CLI on the 4DP file: runs, FTP default taken from cp_lib.CFG (%.0f W)" % cp.CFG["ftp"], ("At FTP %d W" % cp.CFG["ftp"]) in out, out[:0])
+    guarded(cli)
+
     def virtual_fit_skip():
         import segments_tool as st
         fs = [find("tests/07_11_kickr.fit"), find("tests/07_11_garmin.fit")]

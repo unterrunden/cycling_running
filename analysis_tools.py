@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""analysis_tools.py (v2) - quick analysis of Strava/Garmin GPX and FIT / FIT.GZ files.
+"""analysis_tools.py (v2.1, 2026-11-12) - quick analysis of Strava/Garmin GPX and FIT / FIT.GZ files.
 
 Works for rides (with power) and runs (HR + pace).  Needs python3 + numpy; FIT files also need fitparse
 (pip install fitparse --break-system-packages); --batch also needs pandas.
 
 Usage examples
+  python analysis_tools.py ride.gpx            # FTP and easy cap from cp_lib.CFG (one source of truth)
   python analysis_tools.py ride.gpx --ftp 175
   python analysis_tools.py run.gpx --lap 1265 --target 5000
 Options
-  --ftp N      FTP used for zones/IF (default 175)
-  --z2cap N    easy-ride power cap in watts (default 135)
-  --lap M      lap length in metres for run lap splits (default 1250)
+  --ftp N      FTP used for zones/IF (default: cp_lib.CFG['ftp'], the working / planning FTP; 180 W if cp_lib is missing)
+  --z2cap N    easy-ride power cap in watts (default: cp_lib.CFG['z2cap'], 135 W)
+  --lap M      lap length in metres for run lap splits (default 1265 = the Schlosspark loop U1 by GPS)
   --target M   report elapsed time when this distance is reached (runs)
   --tz NAME    time zone for the start time (default Europe/Berlin)
   --stop-speed V  speed (m/s) below which a recorded second counts as stopped (default 1.0)
@@ -529,12 +530,24 @@ def _batch(args):
 
 
 # ----------------------------------------------------------------------------- main
+def _cfg_defaults():
+    """FTP and easy cap from cp_lib.CFG (same folder), so the CLI follows the planning FTP without a second place to edit; fallback 180 / 135 W."""
+    try:
+        import os, importlib
+        here = os.path.dirname(os.path.abspath(__file__))
+        if here not in sys.path: sys.path.insert(0, here)
+        c = importlib.import_module("cp_lib").CFG
+        return {"ftp": float(c["ftp"]), "z2cap": float(c["z2cap"])}
+    except Exception:
+        return {"ftp": 180.0, "z2cap": 135.0}
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("file", nargs="?")
-    ap.add_argument("--ftp", type=float, default=175)
-    ap.add_argument("--z2cap", type=float, default=135)
-    ap.add_argument("--lap", type=float, default=1250)
+    ap.add_argument("--ftp", type=float, default=None)
+    ap.add_argument("--z2cap", type=float, default=None)
+    ap.add_argument("--lap", type=float, default=1265)
     ap.add_argument("--target", type=float, default=0)
     ap.add_argument("--tz", default="Europe/Berlin")
     ap.add_argument("--stop-speed", type=float, default=1.0)
@@ -542,6 +555,9 @@ def main():
     ap.add_argument("--csv")
     ap.add_argument("--out", default="digest")
     args = ap.parse_args()
+    cfg = _cfg_defaults()
+    if args.ftp is None: args.ftp = cfg["ftp"]
+    if args.z2cap is None: args.z2cap = cfg["z2cap"]
     if args.batch:
         if not args.csv:
             raise SystemExit("--batch needs --csv")

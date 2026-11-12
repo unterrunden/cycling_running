@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""cp_lib.py (v1.8, 2026-11-12) - reusable helpers for the 'cycling | running' coaching project.
+"""cp_lib.py (v1.9, 2026-11-12) - reusable helpers for the 'cycling | running' coaching project.
 
 Companion to analysis_tools.py (activity files -> reports / digest) and routes_tool.py (GPX route geometry).
 This module collects everything else that was written ad hoc during the chats:
@@ -24,7 +24,7 @@ import numpy as np
 CFG = dict(ftp=180.0,                                                 # working FTP (W) until the 60-min trainer test
            z2cap=135.0, tz="Europe/Berlin", home=(50.8438, 6.8942), sun_site=(50.94, 6.96),
            mass=68.0, cda=0.38, crr=0.005, rho=1.22, eta=0.98,           # rider 56 kg (Pat 12 Nov, measured; 60 kg before) + bike 10.1 + kit ~2 = 68 kg (72 until v1.7); hoods, cool autumn air
-           ride_hr_zones=(125, 150, 170, 182), run_hr_zones=(130, 160, 175, 190),
+           ride_hr_zones=(132, 148, 162, 177), run_hr_zones=(130, 160, 175, 190),   # cycling Z1-Z4 upper edges (Pat 8 Nov; was 125/150/170/182), Strava run set
            zone_edges=(0, .55, .75, .90, 1.05, 1.20, 1.50, 99))          # Coggan, as fractions of FTP
 G = 9.81
 
