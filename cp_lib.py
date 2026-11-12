@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""cp_lib.py (v1.5, 2026-11-10) - reusable helpers for the 'cycling | running' coaching project.
+"""cp_lib.py (v1.6, 2026-11-11) - reusable helpers for the 'cycling | running' coaching project.
 
 Companion to analysis_tools.py (activity files -> reports / digest) and routes_tool.py (GPX route geometry).
 This module collects everything else that was written ad hoc during the chats:
@@ -531,11 +531,18 @@ def stream_series(streams, start_local, tz=None):
     return dict(t=t0 + np.asarray(streams["time"], float), p=np.asarray(streams.get("watts", []), float), hr=np.asarray(streams.get("heart_rate", []), float))
 
 
-def meter_offset(ref, other, max_lag=180, steady_sd=15.0, bands=(60, 100, 120, 150, 200, 400), show=True):
+def meter_offset(ref, other, max_lag=180, steady_sd=15.0, bands=(60, 100, 120, 150, 200, 400), show=True, align="hr", mask=None):
     """Compare two power meters recorded at the same time (e.g. ref = Edge/Stages FIT, other = KICKR via MyWhoosh FIT or stream).
-    Both are dicts from fit_series() / stream_series(). Aligns `other` by the HR cross-correlation (same strap; fallback power) within
-    +-max_lag s, then compares each `other` sample with the ref 5-s mean around it. Steady samples = ref 9-s SD < steady_sd W.
-    Returns dict(lag_s, r_hr, n, ratio, fit=(a, b) for other = a*ref + b on steady samples, bands=[(lo, hi, n, other, ref, diff, ratio)]).
+    Both are dicts from fit_series() / stream_series(). Aligns `other` by cross-correlation within +-max_lag s, then compares each
+    `other` sample with the ref 5-s mean around it. Steady samples = ref 9-s SD < steady_sd W.
+    align="hr" (default): by HR (same strap; falls back to power without HR); align="power": by power. Use "power" for MyWhoosh files:
+    on 11 Nov MyWhoosh's HR (Bluetooth) ran 4 s behind the Edge's (ANT+) while the power streams lined up at 0 s, so HR alignment shifts
+    the power by 4 s (little effect on steady riding, smears ramps and the 150-400 W bands). mask = [(from_epoch_s, to_epoch_s)] on the
+    ref clock: seconds left out of the comparison (e.g. 11 Nov: the KICKR power cable pulled out during an effort).
+    Caveat: samples are binned by the ref value, so when `other` holds ERG targets the bands next to a target are biased (11 Nov: the
+    150 W ERG block put Stages-high seconds into the 150-200 W band, ratio 0.972, while the block averages give 0.991). For blocks, compare
+    the averages over the same stretch (aerobic_check, hour_test_report) rather than the band table.
+    Returns dict(lag_s, align, r, n, ratio, fit=(a, b) for other = a*ref + b on steady samples, bands=[(lo, hi, n, other, ref, diff, ratio)]).
     6 Nov: KICKR = 0.97 x Stages + 13 W (+8 to +11 W, ratio 1.04 at 190 W, 1.11 at 100 W); MyWhoosh's start time was 51 s off on one file."""
     t0 = int(np.floor(np.nanmin(ref["t"]))); n = int(np.ceil(np.nanmax(ref["t"]))) - t0 + 1
     P = np.full(n, np.nan); H = np.full(n, np.nan); k = (np.asarray(ref["t"]) - t0).astype(int)
@@ -545,16 +552,17 @@ def meter_offset(ref, other, max_lag=180, steady_sd=15.0, bands=(60, 100, 120, 1
         idx = np.round(ot + lag - t0).astype(int); ok = (idx >= 0) & (idx < n)
         a = oh[ok] if which == "hr" else op[ok]; b = H[idx[ok]] if which == "hr" else P[idx[ok]]; m = np.isfinite(a) & np.isfinite(b) & (a > 0) & (b > 0)
         return np.corrcoef(a[m], b[m])[0, 1] if m.sum() > 20 else -1
-    which = "hr" if np.isfinite(oh).sum() > 20 and np.isfinite(H).sum() > 20 else "p"
+    which = "hr" if align == "hr" and np.isfinite(oh).sum() > 20 and np.isfinite(H).sum() > 20 else "p"
     lags = np.arange(-max_lag, max_lag + 1); cs = np.array([corr(l, which) for l in lags]); lag = int(lags[np.argmax(cs)])
     idx = np.round(ot + lag - t0).astype(int); ok = (idx >= 4) & (idx < n - 4) & (op > 0)
+    for a, b in (mask or []): ok &= ~((idx >= a - t0) & (idx <= b - t0))
     o = op[ok]; i = idx[ok]; r5 = np.array([P[x - 2:x + 3].mean() for x in i]); sd = np.array([P[x - 4:x + 5].std() for x in i]); st = sd < steady_sd
     rows = []
     for lo, hi in zip(bands[:-1], bands[1:]):
         m = st & (r5 >= lo) & (r5 < hi)
         if m.sum(): rows.append((lo, hi, int(m.sum()), float(o[m].mean()), float(r5[m].mean()), float(o[m].mean() - r5[m].mean()), float(o[m].mean() / r5[m].mean())))
     fit = tuple(np.linalg.lstsq(np.vstack([r5[st], np.ones(st.sum())]).T, o[st], rcond=None)[0]) if st.sum() > 10 else (np.nan, np.nan)
-    res = dict(lag_s=lag, r_hr=float(cs.max()) if which == "hr" else np.nan, n=int(ok.sum()), ratio=float(o.mean() / r5.mean()), fit=fit, bands=rows)
+    res = dict(lag_s=lag, align=which, r=float(cs.max()), r_hr=float(cs.max()) if which == "hr" else np.nan, n=int(ok.sum()), ratio=float(o.mean() / r5.mean()), fit=fit, bands=rows)
     if show:
         print("lag %+d s (%s r %.3f), %d samples, overall ratio %.3f, steady fit other = %.3f x ref %+.1f W" % (lag, which, cs.max(), res["n"], res["ratio"], fit[0], fit[1]))
         for b in rows: print("  ref %3d-%3d W  n %3d  other %.1f  ref %.1f  diff %+.1f W  ratio %.3f" % b)
@@ -646,11 +654,12 @@ def _series_1hz(s):
     return t0, P, H, C
 
 
-def hour_test_report(path, other=None, dur=3600, block_s=300, lthr_last_s=1200, show=True):
+def hour_test_report(path, other=None, dur=3600, block_s=300, lthr_last_s=1200, show=True, align="power"):
     """Analyse a long all-out test (default the 60-min FTP test) from one FIT (e.g. Edge/Stages), optionally a second recording of the same
     ride (`other`, e.g. the MyWhoosh/KICKR FIT): best `dur` window (elapsed: pauses count as 0 W), per-block W / HR / cadence, halves,
     pacing CV of 1-min means, Pw:HR decoupling, HR drift, LTHR estimate = average HR of the last `lthr_last_s` seconds (Friel), NP;
-    with `other`: its average over the same (HR-aligned) window and the meter_offset table. Returns a dict."""
+    with `other`: its average over the same (aligned; align="power" by default since v1.6, see meter_offset) window and the meter_offset
+    table. Returns a dict."""
     s = fit_series(path); t0, P, H, C = _series_1hz(s)
     if len(P) < dur: raise ValueError("file shorter than %d s" % dur)
     c = np.convolve(P, np.ones(dur) / dur, "valid"); i = int(np.argmax(c)); w = slice(i, i + dur)
@@ -664,7 +673,7 @@ def hour_test_report(path, other=None, dur=3600, block_s=300, lthr_last_s=1200, 
                cad=float(np.nanmean(cd[cd > 0])) if (cd > 0).any() else np.nan, blocks=blocks)
     if other is not None:
         o = fit_series(other) if isinstance(other, str) else other
-        mo = meter_offset(s, o, show=False); to, Po, Ho, Co = _series_1hz(o); a = int(t0 + i - mo["lag_s"] - to)
+        mo = meter_offset(s, o, show=False, align=align); to, Po, Ho, Co = _series_1hz(o); a = int(t0 + i - mo["lag_s"] - to)
         if 0 <= a and a + dur <= len(Po): res["other_avg_w"] = float(Po[a:a + dur].mean()); res["other_zero_s"] = int((Po[a:a + dur] == 0).sum())
         res["meter"] = mo
     if show:
@@ -677,18 +686,20 @@ def hour_test_report(path, other=None, dur=3600, block_s=300, lthr_last_s=1200, 
     return res
 
 
-def aerobic_check(path, targets=(130, 150), tol=10.0, min_s=(1200, 600), last_s=(600, 300), lag_s=180, other=None, show=True):
+def aerobic_check(path, targets=(130, 150), tol=10.0, min_s=(1200, 600), last_s=(600, 300), lag_s=180, other=None, show=True, align="power"):
     """Aerobic check (progress check for goal a, every second week): 20 min at 130 W, then 10 min at 150 W, inside the Z2 part of a ride
     (KICKR, fan, usual room). `path` = FIT path or a fit_series()/stream_series() dict. For each target, finds the longest stretch whose
     30-s mean power stays within +-`tol` W of it; reports length, avg W, the HR of the last `last_s` seconds (the logged value), HR drift
     (first vs last third after `lag_s` s of HR lag), W/HR and cadence. With `other` (a second recording of the same ride, e.g. the Edge
-    with the Stages) also the other meter's ratio on the same stretches (meter check). Returns a list of dicts (one per target)."""
+    with the Stages) also the other meter's ratio on the same stretches (meter check; aligned by power since v1.6, see meter_offset).
+    11 Nov (old fan, "check 0"): 130 W 19.8 min, HR of the last 10 min 149.6; 150 W 9.8 min, HR of the last 5 min 160.9; Stages/KICKR 0.98-0.99.
+    Returns a list of dicts (one per target)."""
     s = fit_series(path) if isinstance(path, str) else path; t0, P, H, C = _series_1hz(s)
     r30 = np.convolve(P, np.ones(30) / 30, "same"); out = []
     o = None
     if other is not None:
         o = fit_series(other) if isinstance(other, str) else other
-        mo = meter_offset(s, o, show=False); to, Po, Ho, Co = _series_1hz(o)
+        mo = meter_offset(s, o, show=False, align=align); to, Po, Ho, Co = _series_1hz(o)
     for k, tw in enumerate(targets):
         ok = (np.abs(r30 - tw) <= tol) & (P > 0); best = (0, 0); i = 0
         while i < len(ok):
