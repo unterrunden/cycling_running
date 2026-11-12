@@ -1,6 +1,6 @@
 # Script catalogue
 
-Where the commands of chats 1-2 went. Source: Pat's archive `all_accessible_commands_with_outputs.zip` (87 files, commands up to 1 Nov 13:18; one duplicate removed, hours zero-padded). The archive is not needed in the repo any more: this file records every disposition.
+Where the commands of chats 1-3 went. Chats 1-2 (sections up to 10 Nov): source Pat's archive `all_accessible_commands_with_outputs.zip` (87 files, commands up to 1 Nov 13:18; one duplicate removed, hours zero-padded). The archive is not needed in the repo any more: this file records every disposition. Chat 3 (10-12 Nov, own section below): listed by Claude from its own session (script files and inline commands), so no export is needed.
 
 Only `bash` commands are in the archive (the commands menu in the app); file-creation calls, Strava / web calls and memory calls are not. File names follow `dd_mm.hh_mm[.index]`.
 
@@ -23,7 +23,7 @@ Counts: PORTED 29, SUPERSEDED 4, PATTERN 6, ONE-OFF 19, HOUSEKEEPING 26, DUPLICA
 | `03_10.10_35` | ONE-OFF | route3 run on the 4DP loop + elevation profile print → `routes_tool` CLI |
 | `03_10.19_41.1` | HOUSEKEEPING | head of a GPX file |
 | `03_10.19_41.2` | PORTED | `run.py`: GPX run analysis (splits, gaps, HR steps, fastest windows) → `analysis_tools.run_report` + `cp_lib` run tools |
-| `03_10.19_41.3` | PORTED | aero model (brentq power → speed) → `cp_lib.speed_from_power` (71 kg / CdA 0.40 then; now 72 kg / 0.38 via CFG) |
+| `03_10.19_41.3` | PORTED | aero model (brentq power → speed) → `cp_lib.speed_from_power` (71 kg / CdA 0.40 then; now 68 kg / 0.38 via CFG since 12 Nov, 72 kg before) |
 | `07_10.22_23.1` | HOUSEKEEPING | directory listing |
 | `07_10.22_23.2` | PORTED | `kroute.py`: komoot GPX analysis → `routes_tool.analyse` / `stretches`. Not ported: komoot's planned time and speed per km (small, can be added) |
 | `08_10.21_56.1` | HOUSEKEEPING | file check |
@@ -130,13 +130,43 @@ Counts: PORTED 29, SUPERSEDED 4, PATTERN 6, ONE-OFF 19, HOUSEKEEPING 26, DUPLICA
 - Ad hoc: 191 bpm (29 Sep) confirmed as the highest strap HR in all files.
 
 ## 10 Nov (chat 2)
-- 11 Nov (cp_lib v1.6): `meter_offset(..., align="power", mask=...)`; `aerobic_check` and `hour_test_report` align by power by default (MyWhoosh HR about 4 s late on 11 Nov; power lag 0 s); docstring caveat on the band table next to ERG targets; selfcheck +2 tests on tests/11_11_garmin.fit + 11_11_kickr.fit (HR lag -4 / power lag 0 / KICKR +2% at 120-150 W; aerobic check 0: HR 149.6 / 160.9, ratios 0.979 / 0.991). Ad hoc in chat 3: sprint windows on both meters, the cable-cut window, a clean-beat RR peak (5-/10-beat means of artefact-free beats) for the 194 bpm max.
 - Progress checks for the 6-week plan → `cp_lib.aerobic_check` (cp_lib v1.5): finds the 130 W / 150 W blocks of the aerobic check in a ride file, HR of the last 10 / 5 min, drift, W/HR, optional second recording for the meter ratio; selfcheck test on synthetic data plus the hilly 7 Nov file (no block). The other checks use existing tools (`ride_session` decoupling, `run_series` / `split_table`).
 - `selfcheck.py`: the old 4DP v1 route test (its GPX is no longer in the repo, so it was always skipped) is replaced by the same merge-rule and smoothing check on C1 (4dp v2: 28 / 17 turns, +166/-168 m); the support branch for the old C19 file (approach + loop), the old `rides_runs_gpx_files_*.zip` pattern and old test-file names (`5k_28oct.fit`, `4dp_01_11.fit`) are removed. 37 checks, none skipped with the current zips.
+
+## Chat 3 (10-12 Nov)
+Listed by Claude from the session itself (named = script file in the sandbox scratchpad, inline = a one-off `python3 - <<EOF` or shell command). Counts: PORTED 3, SUPERSEDED 1, ONE-OFF 3, PATTERN 2, HOUSEKEEPING 9 (18 commands; the Strava calls are not counted).
+
+| Command (date) | Category | Where it went / why |
+|---|---|---|
+| inline: clone + install + selfcheck (10 Nov, twice) | HOUSEKEEPING | first blocked by the session's permission check (code from an external source) until Pat confirmed in the chat; then 37 passed |
+| inline: clone into the scratchpad, version and tests/ listing (10 Nov) | HOUSEKEEPING | checked cp_lib v1.5 and the 10 Nov commit |
+| `run_10_11.py` (10 Nov) | ONE-OFF | 10 Nov run from a 250-point Strava stream copied by hand: stops (gaps > 30 s), pace per lap and km on a moving clock, HR valid only after the strap was re-attached, a GPS jump after stop 1. Results in coach_notes.md section 1. Not ported: lap splits straight from a connector stream with stops (`split_table` needs `run_series` from a FIT) |
+| `sun.py` (10 Nov) | SUPERSEDED | own NOAA sunset for Brühl, written while the repo could not run; `cp.sun_times` gives about 1 min later and is the reference |
+| inline: `cp.sun_times` cross-check (10 Nov) | HOUSEKEEPING | Thu 12 - Sun 20 Dec sunsets |
+| inline: attachment inspection + diff of the attached coach_notes against the local copy (11 Nov) | HOUSEKEEPING | found CRLF line ends and blank lines holding a space |
+| `normalize.py` (11 Nov) | PORTED | `cp_lib.normalize_md` (v1.7; selfcheck test) |
+| inline: copy FITs, `fit_inspect`, `fit_laps`, `fit_pauses`, `aerobic_check`, `meter_offset` (11 Nov) | HOUSEKEEPING | library calls on tests/11_11_*.fit |
+| `ride_11_11.py` (11 Nov) | ONE-OFF | per-second efforts on both meters, identical-sample check (Edge power = Stages), openers, HR around the max, 1-s HR jumps (Edge 8 vs MyWhoosh 33), RR count |
+| `ride_11_11_b.py` (11 Nov) | ONE-OFF | trainer speed and FE-C resistance on the Edge around the efforts (found the dead KICKR in effort 2: the pulled power cable), wind-up before sprint 1, best windows, RR clock matching, `hrv_quality` |
+| `ride_11_11_c.py` (11 Nov) | PORTED | power-based lag (0 s vs the HR lag of -4 s) and the masked cable-cut window → `meter_offset(align="power", mask=...)` (v1.6; selfcheck test); the rest ONE-OFF: sprint windows on both meters, 130 W block per 5 min, decoupling, Edge vs MyWhoosh HR |
+| `rr_peak.py` (11 Nov) | PORTED | clean-beat peak HR (5-/10-beat means of beats within 12% of their 7-beat median) → `cp_lib.hr_peak_clean` (v1.7; selfcheck test: 194 / 192.9 / 192.5) |
+| inline: `git pull` on the shallow clone (11 Nov) | HOUSEKEEPING | fails on a shallow clone with new commits ("divergent branches"): re-clone into a fresh folder instead |
+| inline: cp_lib v1.6 edits + selfcheck runs (11 Nov) | HOUSEKEEPING | 39 passed after fixing an index error in the new test (band rows are lo, hi, n, other, ref, diff, ratio) |
+| inline: history_digest.md and README / catalogue patches (11 Nov) | PATTERN | assert-once string replacement, the same idea as `cp.Patch` |
+| inline: doc edits with the Edit tool on the local copies (11-12 Nov) | PATTERN | docs live in a local `docs/` copy, written back with `project_write(local_path=...)` |
+| inline: clone of 12 Nov, comparison of repo files with the handover | HOUSEKEEPING | docs/coach_notes.md on GitHub was the 18:00 version (re-upload asked); the rest matched |
+| inline: cp_lib v1.7 edits, `--index-md`, selfcheck (12 Nov) | HOUSEKEEPING | 41 passed |
+| inline: Strava connector calls (all chats) | - | not commands; their results are in coach_notes.md |
+
+- 11 Nov (cp_lib v1.6): `meter_offset(..., align="power", mask=...)`; `aerobic_check` and `hour_test_report` align by power by default (MyWhoosh HR about 4 s late on 11 Nov; power lag 0 s); docstring caveat on the band table next to ERG targets; selfcheck +2 tests on tests/11_11_garmin.fit + 11_11_kickr.fit (HR lag -4 / power lag 0 / KICKR +2% at 120-150 W; aerobic check 0: HR 149.6 / 160.9, ratios 0.979 / 0.991).
+- 12 Nov (cp_lib v1.7): `normalize_md` (PATCH) and `hr_peak_clean` (FIT); selfcheck +2 tests (41 checks); README function index regenerated, `docs/` folder described.
+- 12 Nov (cp_lib v1.8, segments_tool v1.4): rider weight 56 kg [Pat, measured; the 60 kg before was never weighed]: `CFG mass` 72 -> 68 kg (rider + bike 10.1 + kit about 2), `RIDER_KG` 60 -> 56; `segments_archive.csv` rebuilt (only the W/kg column changes; segments.md W/kg updated from it); all 41 checks still pass (physics outputs shift slightly: 20 min at 185 W 9.94 / 12.01 / 8.07 km, 1 Nov sprint meter/physics 1.07 / 1.09). README: data list as bullets per date, incl. tests/11_11_*.
 
 ## Gotchas learned along the way (all handled in the library)
 - `np.convolve(..., mode='same')` pads the edges with zeros: fake climbs at every route start (fixed with edge padding).
 - Strava-made run FIT files: the speed field is unreliable (smoothed phone speed); use the distance field. Garmin ride FITs have gaps where the timer was paused.
+- A shallow clone (`--depth 1`) cannot `git pull` once new commits exist: clone again into a fresh folder.
+- MyWhoosh's Bluetooth HR runs about 4 s behind the Edge's ANT+ HR (11 Nov): align two meters by power.
 - The HR-flag counter in `analysis_tools.py` is capped at 8 and says nothing for 1 Hz ride files; use `hr_plateaus` / `hrv_quality` instead.
 - `activities.csv`: timestamps are UTC; duplicated headers (`Elapsed Time.1`, `Distance.1`, ...); avg watts before the power meter (7-20 Aug) are Strava estimates.
 - GPX run distance from raw GPS can over-read (14 Oct best 1K 3:51 vs Strava 4:01): trust Strava's best efforts for runs.

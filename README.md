@@ -8,10 +8,25 @@ The repo is public and the sandbox can clone it. Claude cannot push to GitHub: n
 ```sh
 git clone --depth 1 https://github.com/unterrunden/cycling_running repo && cd repo
 pip install fitparse scipy pandas --break-system-packages -q
-python3 selfcheck.py        # 39 checks (under 1 min): every PASS = the toolkit still reproduces the validated numbers
+python3 selfcheck.py        # 41 checks (under 1 min): every PASS = the toolkit still reproduces the validated numbers
 ```
+Then check that the data list below names every file in `tests/`; add missing ones to the next handover.
 
-Data in the repo: the newest `strava_export_<dd_mm>.zip` (full Strava export: `activities.csv`, the activity files and `routes/`) and `all_routes_<dd_mm>.zip` (route GPX files). Segments: `segments.json` (definitions + reference lines) and `segments_archive.csv` (every effort, rebuilt by `segments_tool.py`). Optional test files: `tests/28_10.fit` (28 Oct 5K), `tests/01_11.fit` (1 Nov 4DP), `tests/06_11_stages_series.json` + `tests/06_11_kickr_streams.json` (6 Nov KICKR vs Stages, no GPS), `tests/07_11_garmin.fit` + `tests/07_11_kickr.fit` (7 Nov, both recordings at 1 Hz; Edge indoors without GPS, MyWhoosh virtual coordinates), `tests/09_11_digest_rides.csv` + `tests/09_11_digest_runs.csv` (digest CSVs of the 9 Nov export, for the digest-generator test).
+Data in the repo:
+- `strava_export_<dd_mm>.zip`: the newest full Strava export (`activities.csv`, the activity files and `routes/`); selfcheck picks the newest.
+- `all_routes_<dd_mm>.zip`: the route GPX files (routes_and_courses.md).
+- `segments.json` (definitions + reference lines) and `segments_archive.csv` (every tracked effort, rebuilt by `segments_tool.py`).
+- `docs/`: the Project docs (below).
+- `tests/` (optional test files, one line per date; selfcheck skips a test whose file is missing):
+  - 28 Oct: `28_10.fit` (5K trial, Strava-made run FIT)
+  - 1 Nov: `01_11.fit` (4DP, Edge/Stages)
+  - 6 Nov: `06_11_stages_series.json` + `06_11_kickr_streams.json` (KICKR vs Stages, no GPS)
+  - 7 Nov: `07_11_garmin.fit` + `07_11_kickr.fit` (both recordings at 1 Hz; Edge indoors without GPS, MyWhoosh virtual coordinates)
+  - 9 Nov: `09_11_digest_rides.csv` + `09_11_digest_runs.csv` (digest CSVs of the 9 Nov export, for the digest-generator test)
+  - 11 Nov: `11_11_garmin.fit` + `11_11_kickr.fit` (trainer ride with aerobic check 0, sprints and the pulled KICKR cable at Edge min 61.3-63.6; HR max 194)
+- New test files are listed here when they are added (Claude includes it in the handover).
+
+Project docs: `docs/` holds the newest versions of the five Project docs (coach_notes.md, project_memory_mirror.md, history_digest.md, routes_and_courses.md, segments.md = `claude/segments.md` in the Project), uploaded by Pat after each update; the Project copy wins if they differ (compare the date in the first line).
 
 Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded in the chat or a newer export in the repo give block-level detail. Connector streams cannot be piped into the sandbox; a reduced-resolution stream (resolution <= ~300) can be copied into a JSON file by hand (`cp.stream_series`).
 
@@ -27,7 +42,7 @@ Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded
 | `SCRIPT_CATALOGUE.md` | Where the commands of the chats went (ported / superseded / one-off) and the gotchas learned on the way |
 
 ## Cookbook (task → command; `import cp_lib as cp, routes_tool as rt`)
-- First look at any FIT: `cp.fit_inspect(f)`. Lap-button blocks, pauses, strap: `cp.fit_laps(f)`, `cp.fit_pauses(f)`, `cp.fit_events(f)`, `cp.hrv_quality(f)`.
+- First look at any FIT: `cp.fit_inspect(f)`. Lap-button blocks, pauses, strap: `cp.fit_laps(f)`, `cp.fit_pauses(f)`, `cp.fit_events(f)`, `cp.hrv_quality(f)`; a new max HR against clean beats: `cp.hr_peak_clean(f)`.
 - Ride report: `python3 analysis_tools.py f.fit --ftp 175`; session view (blocks, best windows with HR and speed, decoupling, efforts): `cp.ride_session(f)`.
 - 4DP / Full Frontal: `cp.fourdp_report(f)` (sprints with a physics check, per-minute blocks, gaps with stopped time, strap quality, FTP by the 4DP rule).
 - Window / block detail: `a, ex, tl = cp.load_activity(f)`; `cp.best_window(tl, 1200, 'elapsed')`; `cp.ride_blocks(tl, 10)`.
@@ -41,7 +56,7 @@ Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded
 - HR quality and zones: `cp.hr_artefact_scan(tl)` (minute ranges where HR cannot match the power: 200 W / 45 s and 150 W / 2 min tiers), `cp.hr_gaps(tl)` (missing HR while riding; Strava draws it as a frozen line); `w = cp.hr_power_windows(tl)` per ride, stacked → `cp.hr_zone_score(w, [133, 148, 162, 173], ftp)` / `cp.hr_zone_optimise(w, ftp)`.
 - Progress checks (coach_notes.md section 7): aerobic check `cp.aerobic_check(kickr_fit, other=edge_fit)` (20 min at 130 W + 10 min at 150 W: HR of the last 10 / 5 min, drift, W/HR, meter ratio); long-ride durability `cp.ride_session(f)` (decoupling); run pace and HR per lap `cp.split_table(cp.run_series(f), 1265)`.
 - Two power meters at once (KICKR vs Stages): `cp.meter_offset(cp.fit_series(edge_fit), cp.fit_series(kickr_fit), align="power")` (v1.6: align by power for MyWhoosh files, whose HR runs about 4 s late; `mask=[(from_epoch, to_epoch)]` drops broken stretches; default align by HR as before; compare blocks by their averages, the band table is biased next to ERG targets; power-band table, linear fit); a stream instead of a FIT: `cp.stream_series(streams, '2026-11-06T15:51:40')`.
-- Edit markdown safely: `p = cp.Patch('coach_notes.md'); p.rep(old, new, 'tag'); p.insert_after('- [stated] ...', new); p.save('out.md')` (refuses to save if any target is missing).
+- Edit markdown safely: `p = cp.Patch('coach_notes.md'); p.rep(old, new, 'tag'); p.insert_after('- [stated] ...', new); p.save('out.md')` (refuses to save if any target is missing). Attached or exported Project docs first through `cp.normalize_md(src, dst)` (CRLF, space-only blank lines, headings).
 
 ## Conventions
 - Elapsed-based = Strava power-curve convention (stopped or paused seconds count as 0 W); rolling / moving = stopped seconds removed, coasting kept (Strava average-power convention).
@@ -68,7 +83,6 @@ Claude hands over the changed files, Pat commits them, then `python3 selfcheck.p
 
 ## `cp_lib.py` function index (generated by `python3 cp_lib.py --index-md`)
 
-
 ### CONFIG
 - `fmt_t`: Seconds -> m:ss text (e.g. 1410 -> 23:30).
 
@@ -86,6 +100,7 @@ Claude hands over the changed files, Pat commits them, then `python3 selfcheck.p
 
 ### PATCH
 - `Patch`: Safe edits of a text file.
+- `normalize_md`: Clean a Project doc exported or attached from claude.ai (CRLF line ends, blank lines holding a space, headings glued to the line above): LF line ends, trailing spaces removed, whitespace-only lines emptied, a blank line before every heading outside code fences, one final newline.
 
 ### FIT
 - `fit_inspect`: First look at a FIT file: producer/device, sport, session summary, record channels and counts, time span, gaps, timer events, laps, HRV.
@@ -93,6 +108,7 @@ Claude hands over the changed files, Pat commits them, then `python3 selfcheck.p
 - `fit_events`: Timer events (start / stop_all with trigger auto|manual), markers, off-course notices.
 - `fit_pauses`: Timer pauses: from each stop_all to the next start: offset into the file, duration, and what triggered the stop (auto / manual).
 - `hrv_quality`: Beat-to-beat (RR) quality from the FIT 'hrv' messages (Garmin ride files; Strava-made files have none).
+- `hr_peak_clean`: Peak HR from artefact-free beats (FIT 'hrv' messages): checks a new max HR against the strap's own 1-s values.
 
 ### LOADING (uses `analysis_tools.py`)
 - `load_activity`: Load a GPX / FIT / FIT.GZ activity.
@@ -128,7 +144,7 @@ Claude hands over the changed files, Pat commits them, then `python3 selfcheck.p
 - `hr_power_windows`: Quasi-steady windows of one ride for HR-zone work: every 60 s a `win_s` window (after the first `skip_s`), moving throughout, 10-s power CV <= max_cv; HR = mean of its last `hr_last_s` s (HR lag).
 - `hr_zone_score`: How well 5 HR zones (upper edges, e.g. [133, 148, 162, 173]: Z1 < 133 ...) reproduce the power zone (Coggan 5-zone fractions of ftp) of each window.
 - `hr_zone_optimise`: Grid search of the Z2/Z3, Z3/Z4 and Z4/Z5 HR edges (Z1 edge fixed: few steady recovery windows) maximising hr_zone_score's balanced accuracy.
-- `hour_test_report`: Analyse a long all-out test (default the 60-min FTP test) from one FIT (e.g. Edge/Stages), optionally a second recording of the same ride (`other`, e.g. the MyWhoosh/KICKR FIT): best `dur` window (elapsed: pauses count as 0 W), per-block W / HR / cadence, halves, pacing CV of 1-min means, Pw:HR decoupling, HR drift, LTHR estimate = average HR of the last `lthr_last_s` seconds (Friel), NP; with `other`: its average over the same (HR-aligned) window and the meter_offset table.
+- `hour_test_report`: Analyse a long all-out test (default the 60-min FTP test) from one FIT (e.g. Edge/Stages), optionally a second recording of the same ride (`other`, e.g. the MyWhoosh/KICKR FIT): best `dur` window (elapsed: pauses count as 0 W), per-block W / HR / cadence, halves, pacing CV of 1-min means, Pw:HR decoupling, HR drift, LTHR estimate = average HR of the last `lthr_last_s` seconds (Friel), NP; with `other`: its average over the same (aligned; align="power" by default since v1.6, see meter_offset) window and the meter_offset table.
 - `aerobic_check`: Aerobic check (progress check for goal a, every second week): 20 min at 130 W, then 10 min at 150 W, inside the Z2 part of a ride (KICKR, fan, usual room).
 - `fourdp_report`: Analyse a 4DP / Full Frontal file (two 5-s sprints, 5 min, 20 min, 1 min, in that order) without laps or manual input.
 

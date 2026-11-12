@@ -229,6 +229,19 @@ def main():
         else: skip("aerobic_check 11 Nov", "tests/11_11_*.fit not in the repo (optional)")
     guarded(aerobic)
 
+    def peak_and_docs():
+        g11 = find("tests/11_11_garmin.fit")
+        if g11:
+            r = cp.hr_peak_clean(g11, show=False)
+            check("hr_peak_clean 11 Nov: record max 194, clean peak 192.9 / 192.5 bpm (5 / 10 beats), 98.5% clean",
+                  r["record_max"] == 194 and abs(r["peak5"] - 192.9) < 0.2 and abs(r["peak10"] - 192.5) < 0.2 and abs(r["clean_pct"] - 98.5) < 0.2,
+                  "max %.0f, %.1f / %.1f, %.1f%%" % (r["record_max"], r["peak5"], r["peak10"], r["clean_pct"]))
+        else: skip("hr_peak_clean 11 Nov", "tests/11_11_garmin.fit not in the repo (optional)")
+        raw = "# A\r\nx\r\n \r\n## B\r\ntext\r\n### C\r\n```\r\n# not a heading\r\n```\r\n \r\n"
+        want = "# A\nx\n\n## B\ntext\n\n### C\n```\n# not a heading\n```\n"
+        check("normalize_md: CRLF, blank lines with a space, blank line before headings (not inside code fences)", cp.normalize_md(raw) == want)
+    guarded(peak_and_docs)
+
     def virtual_fit_skip():
         import segments_tool as st
         fs = [find("tests/07_11_kickr.fit"), find("tests/07_11_garmin.fit")]

@@ -1,4 +1,4 @@
-# Segments: definitions and effort archive (status 9 Nov 2026)
+# Segments: definitions and effort archive (status 9 Nov 2026; W/kg at 56 kg since 12 Nov)
 
 Strava segments Pat tracks, with every real effort found in his ride files. Sources: Pat's Strava values (6 and 8 Nov) for the segment
 data, PR and effort count; efforts rebuilt by `segments_tool.py` v1.3 (repo) from the Strava export of 9 Nov (strava_export_09_11.zip,
@@ -11,7 +11,7 @@ now equal Strava's), 46 tracked; 23 segments on the to-do list.
   speed^3 on the flat). The overview counts all efforts found; the tables list the tracked ones. Thresholds live in `segments.json`.
 - Time is elapsed (as Strava). W and cadence are averaged over the recorded samples, which equals Strava's segment values when the effort
   has no auto-paused stop. With an auto-paused stop Strava counts the stop as 0 W, so its value equals the elapsed-based one; the Notes
-  column then shows it ("stop 67s (elapsed-based 148 W, as Strava)"). "% of PR W" always uses the elapsed-based power. W/kg at 60 kg.
+  column then shows it ("stop 67s (elapsed-based 148 W, as Strava)"). "% of PR W" always uses the elapsed-based power. W/kg at 56 kg (Pat 12 Nov: measured; the earlier 60 kg was never weighed).
   HR from the Polar H9.
 - HR is blanked where it is unusable: 17 Oct (Pat: "HR data inaccurate and not usable"); 10 Sep min 13-58 (strap gaps and dropouts, km
   about 5-22; Strava draws the missing part as a frozen line, km 7.3-13.5 in Pat's screenshot); 5 Sep min 20-36 (75-130 bpm at about
@@ -89,8 +89,8 @@ now equal Strava's), 46 tracked; 23 segments on the to-do list.
 ### Mount Phantasialand (23234747), 1.56 km, 55 m, 3.5 %
 | Date | Time | Rank | km/h | W | W/kg | % of PR W | Cad | HR avg/max | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-09-27 15:49 | 3:41 | 1 | 25.6 | 248 | 4.13 | 100 | 88 | 182/189 |  |
-| 2026-08-29 19:30 | 4:03 | 3 | 23.2 | 219 | 3.65 | 88 | 87 | -/- |  |
+| 2026-09-27 15:49 | 3:41 | 1 | 25.6 | 248 | 4.43 | 100 | 88 | 182/189 |  |
+| 2026-08-29 19:30 | 4:03 | 3 | 23.2 | 219 | 3.91 | 88 | 87 | -/- |  |
 | 2026-08-19 15:44 | 3:45 | 2 | 25.1 | - | - | - | - | -/- |  |
 | 2026-08-09 19:29 | 4:10 | 4 | 22.6 | - | - | - | - | -/- |  |
 1 more effort(s) below the tracking threshold not listed.
@@ -98,20 +98,20 @@ now equal Strava's), 46 tracked; 23 segments on the to-do list.
 ### VochemBerg III (38595955), 0.56 km, 27 m, 4.9 %
 | Date | Time | Rank | km/h | W | W/kg | % of PR W | Cad | HR avg/max | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-09-27 16:41 | 1:25 | 1 | 23.6 | 277 | 4.61 | 100 | 84 | 178/187 |  |
+| 2026-09-27 16:41 | 1:25 | 1 | 23.6 | 277 | 4.94 | 100 | 84 | 178/187 |  |
 
 ### Raus aus der Stadt (41002017), 1.16 km, 2 m, -0.4 %
 | Date | Time | Rank | km/h | W | W/kg | % of PR W | Cad | HR avg/max | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-09-27 18:10 | 1:55 | 1 | 36.5 | 246 | 4.11 | 100 | 91 | 174/182 |  |
+| 2026-09-27 18:10 | 1:55 | 1 | 36.5 | 246 | 4.40 | 100 | 91 | 174/182 |  |
 6 more effort(s) below the tracking threshold not listed.
 
 ### Theodor-Heuss Downforce (13203814), 1.27 km, 0 m, -2.4 %
 | Date | Time | Rank | km/h | W | W/kg | % of PR W | Cad | HR avg/max | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-09-27 17:48 | 1:43 | 1 | 44.5 | 255 | 4.26 | 100 | 96 | 179/184 |  |
-| 2026-09-22 17:14 | 1:48 | 3 | 42.1 | 229 | 3.82 | 90 | 93 | 175/180 | stop 18s |
-| 2026-08-30 18:54 | 1:46 | 2 | 43.3 | 209 | 3.48 | 82 | 100 | -/- |  |
+| 2026-09-27 17:48 | 1:43 | 1 | 44.5 | 255 | 4.56 | 100 | 96 | 179/184 |  |
+| 2026-09-22 17:14 | 1:48 | 3 | 42.1 | 229 | 4.09 | 90 | 93 | 175/180 | stop 18s |
+| 2026-08-30 18:54 | 1:46 | 2 | 43.3 | 209 | 3.72 | 82 | 100 | -/- |  |
 16 more effort(s) below the tracking threshold not listed.
 
 ### Fischenich Ahoi (30701495), 1.58 km, 61 m, 3.5 % - no power or HR yet
@@ -122,94 +122,94 @@ now equal Strava's), 46 tracked; 23 segments on the to-do list.
 ### Kurfürsten Sprint (14456798), 0.48 km, 0 m, -1.3 % - segment min/max elevation implausible (Pat)
 | Date | Time | Rank | km/h | W | W/kg | % of PR W | Cad | HR avg/max | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-09-27 17:07 | 0:43 | 1 | 40.5 | 305 | 5.09 | 100 | 96 | 169/177 |  |
+| 2026-09-27 17:07 | 0:43 | 1 | 40.5 | 305 | 5.45 | 100 | 96 | 169/177 |  |
 | 2026-08-12 12:55 | 0:44 | 2 | 40.0 | - | - | - | - | -/- |  |
 1 more effort(s) below the tracking threshold not listed.
 
 ### Flammgasse Climb (6678444), 0.57 km, 57 m, 9.8 %
 | Date | Time | Rank | km/h | W | W/kg | % of PR W | Cad | HR avg/max | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-09-27 16:04 | 2:16 | 1 | 14.9 | 270 | 4.50 | 100 | 79 | 184/189 |  |
+| 2026-09-27 16:04 | 2:16 | 1 | 14.9 | 270 | 4.82 | 100 | 79 | 184/189 |  |
 1 more effort(s) below the tracking threshold not listed.
 
 ### Kierberger Sprint (42273304), 0.74 km, 4 m, -0.2 %
 | Date | Time | Rank | km/h | W | W/kg | % of PR W | Cad | HR avg/max | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-10-17 18:24 | 1:14 | 3 | 36.1 | 277 | 4.62 | 102 | 98 | -/- | HR data inaccurate and not usable (Pat: 17 Oct, derailleur failure ride) |
-| 2026-10-02 16:28 | 1:22 | 5 | 32.9 | 236 | 3.94 | 87 | 84 | 171/182 |  |
-| 2026-09-29 19:28 | 1:10 | 2 | 38.4 | 301 | 5.02 | 111 | 95 | 178/191 |  |
-| 2026-09-27 18:48 | 1:09 | 1 | 38.9 | 270 | 4.51 | 100 | 93 | 173/180 |  |
+| 2026-10-17 18:24 | 1:14 | 3 | 36.1 | 277 | 4.95 | 102 | 98 | -/- | HR data inaccurate and not usable (Pat: 17 Oct, derailleur failure ride) |
+| 2026-10-02 16:28 | 1:22 | 5 | 32.9 | 236 | 4.22 | 87 | 84 | 171/182 |  |
+| 2026-09-29 19:28 | 1:10 | 2 | 38.4 | 301 | 5.38 | 111 | 95 | 178/191 |  |
+| 2026-09-27 18:48 | 1:09 | 1 | 38.9 | 270 | 4.83 | 100 | 93 | 173/180 |  |
 9 more effort(s) below the tracking threshold not listed.
 
 ### Mühlenbach Climb (27969520), 0.77 km, 33 m, 4.2 % - not nearly all out (Pat)
 | Date | Time | Rank | km/h | W | W/kg | % of PR W | Cad | HR avg/max | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-10-17 17:43 | 2:27 | 1 | 19.0 | 192 | 3.19 | 100 | 83 | -/- | HR data inaccurate and not usable (Pat: 17 Oct, derailleur failure ride) |
+| 2026-10-17 17:43 | 2:27 | 1 | 19.0 | 192 | 3.42 | 100 | 83 | -/- | HR data inaccurate and not usable (Pat: 17 Oct, derailleur failure ride) |
 | 2026-08-07 16:18 | 2:35 | 2 | 18.0 | - | - | - | - | -/- |  |
 1 more effort(s) below the tracking threshold not listed.
 
 ### Die UtkDoe Challenge (8001608), 0.94 km, 0 m, -0.9 %
 | Date | Time | Rank | km/h | W | W/kg | % of PR W | Cad | HR avg/max | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-10-08 18:04 | 1:16 | 1 | 44.2 | 283 | 4.72 | 100 | 94 | 175/182 |  |
-| 2026-10-08 17:49 | 1:18 | 2 | 43.0 | 253 | 4.22 | 90 | 93 | 155/178 |  |
-| 2026-09-30 18:15 | 1:25 | 3 | 39.2 | 253 | 4.21 | 89 | 93 | 179/185 |  |
-| 2026-09-15 16:31 | 1:34 | 5 | 35.9 | 231 | 3.84 | 82 | 87 | 173/181 |  |
+| 2026-10-08 18:04 | 1:16 | 1 | 44.2 | 283 | 5.05 | 100 | 94 | 175/182 |  |
+| 2026-10-08 17:49 | 1:18 | 2 | 43.0 | 253 | 4.52 | 90 | 93 | 155/178 |  |
+| 2026-09-30 18:15 | 1:25 | 3 | 39.2 | 253 | 4.51 | 89 | 93 | 179/185 |  |
+| 2026-09-15 16:31 | 1:34 | 5 | 35.9 | 231 | 4.12 | 82 | 87 | 173/181 |  |
 5 more effort(s) below the tracking threshold not listed.
 
 ### Ab auf den Müll! (10822662), 1.79 km, 2 m, -0.5 % - not all out (Pat)
 | Date | Time | Rank | km/h | W | W/kg | % of PR W | Cad | HR avg/max | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-10-02 16:07 | 3:19 | 3 | 32.6 | 192 | 3.20 | 103 | 88 | 169/177 |  |
-| 2026-09-30 18:21 | 3:31 | 7 | 30.7 | 150 | 2.50 | 80 | 81 | 154/160 |  |
-| 2026-09-23 19:05 | 3:46 | 10 | 28.6 | 151 | 2.51 | 81 | 75 | 153/156 |  |
-| 2026-09-22 16:59 | 3:15 | 1 | 33.3 | 186 | 3.10 | 100 | 85 | 162/169 |  |
-| 2026-09-17 17:19 | 3:24 | 6 | 31.8 | 175 | 2.92 | 94 | 83 | 162/166 |  |
-| 2026-09-17 17:09 | 3:23 | 5 | 32.0 | 194 | 3.24 | 105 | 83 | 161/178 |  |
-| 2026-09-17 17:00 | 3:16 | 2 | 33.0 | 211 | 3.51 | 113 | 86 | 167/179 |  |
-| 2026-09-17 16:49 | 3:19 | 3 | 32.5 | 203 | 3.38 | 109 | 85 | 160/178 |  |
-| 2026-09-15 16:37 | 3:32 | 8 | 30.7 | 166 | 2.77 | 89 | 84 | 169/173 |  |
+| 2026-10-02 16:07 | 3:19 | 3 | 32.6 | 192 | 3.43 | 103 | 88 | 169/177 |  |
+| 2026-09-30 18:21 | 3:31 | 7 | 30.7 | 150 | 2.68 | 80 | 81 | 154/160 |  |
+| 2026-09-23 19:05 | 3:46 | 10 | 28.6 | 151 | 2.69 | 81 | 75 | 153/156 |  |
+| 2026-09-22 16:59 | 3:15 | 1 | 33.3 | 186 | 3.32 | 100 | 85 | 162/169 |  |
+| 2026-09-17 17:19 | 3:24 | 6 | 31.8 | 175 | 3.13 | 94 | 83 | 162/166 |  |
+| 2026-09-17 17:09 | 3:23 | 5 | 32.0 | 194 | 3.47 | 105 | 83 | 161/178 |  |
+| 2026-09-17 17:00 | 3:16 | 2 | 33.0 | 211 | 3.76 | 113 | 86 | 167/179 |  |
+| 2026-09-17 16:49 | 3:19 | 3 | 32.5 | 203 | 3.62 | 109 | 85 | 160/178 |  |
+| 2026-09-15 16:37 | 3:32 | 8 | 30.7 | 166 | 2.97 | 89 | 84 | 169/173 |  |
 4 more effort(s) below the tracking threshold not listed.
 
 ### Long and windy road - Formtest (17867626), 7.87 km, 39 m, 0.5 %
 | Date | Time | Rank | km/h | W | W/kg | % of PR W | Cad | HR avg/max | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-11-01 14:52 | 15:55 | 1 | 29.7 | 182 | 3.03 | 100 | 86 | 172/178 |  |
-| 2026-10-31 15:39 | 19:43 | 2 | 23.9 | 157 | 2.62 | 82 | 86 | 158/170 | stop 67s (elapsed-based 148 W, as Strava) |
+| 2026-11-01 14:52 | 15:55 | 1 | 29.7 | 182 | 3.24 | 100 | 86 | 172/178 |  |
+| 2026-10-31 15:39 | 19:43 | 2 | 23.9 | 157 | 2.80 | 82 | 86 | 158/170 | stop 67s (elapsed-based 148 W, as Strava) |
 
 ### Otto-Wels-Sprint (13164514), 1.70 km, 6 m, -0.6 % - PR on the very first road ride (Pat)
 | Date | Time | Rank | km/h | W | W/kg | % of PR W | Cad | HR avg/max | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-09-20 16:42 | 3:16 | 3 | 30.7 | 173 | 2.88 | - | 77 | 155/160 |  |
-| 2026-09-10 19:50 | 3:13 | 2 | 31.3 | 207 | 3.44 | - | 84 | 167/173 |  |
+| 2026-09-20 16:42 | 3:16 | 3 | 30.7 | 173 | 3.08 | - | 77 | 155/160 |  |
+| 2026-09-10 19:50 | 3:13 | 2 | 31.3 | 207 | 3.69 | - | 84 | 167/173 |  |
 | 2026-08-07 16:01 | 3:12 | 1 | 31.4 | - | - | - | - | -/- |  |
 1 more effort(s) below the tracking threshold not listed.
 
 ### Liblarer->Bleibtreu See (8327378), 1.90 km, 17 m, 0.9 % - mostly easy drive-throughs, never all out (Pat)
 | Date | Time | Rank | km/h | W | W/kg | % of PR W | Cad | HR avg/max | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-10-02 16:17 | 3:53 | 1 | 29.4 | 202 | 3.37 | 100 | 88 | 171/175 |  |
-| 2026-09-22 17:08 | 4:09 | 5 | 27.5 | 187 | 3.12 | 93 | 82 | 166/169 |  |
-| 2026-09-12 17:31 | 3:59 | 3 | 28.6 | 182 | 3.03 | 90 | 82 | 169/178 |  |
-| 2026-09-05 20:00 | 4:00 | 4 | 28.6 | 180 | 3.00 | 89 | 76 | 166/169 |  |
-| 2026-09-05 19:34 | 3:58 | 2 | 28.7 | 180 | 3.00 | 89 | 76 | -/- | HR unusable: 5 Sep min 20-36 (HR 75-130 at about 180 W, found 8 Nov) |
+| 2026-10-02 16:17 | 3:53 | 1 | 29.4 | 202 | 3.61 | 100 | 88 | 171/175 |  |
+| 2026-09-22 17:08 | 4:09 | 5 | 27.5 | 187 | 3.34 | 93 | 82 | 166/169 |  |
+| 2026-09-12 17:31 | 3:59 | 3 | 28.6 | 182 | 3.24 | 90 | 82 | 169/178 |  |
+| 2026-09-05 20:00 | 4:00 | 4 | 28.6 | 180 | 3.21 | 89 | 76 | 166/169 |  |
+| 2026-09-05 19:34 | 3:58 | 2 | 28.7 | 180 | 3.21 | 89 | 76 | -/- | HR unusable: 5 Sep min 20-36 (HR 75-130 at about 180 W, found 8 Nov) |
 12 more effort(s) below the tracking threshold not listed.
 
 ### Fischenich Berg Gleise -> Ampel (21410880), 0.85 km, 42 m, 4.9 % - PR HR unusable (17 Oct); Pat: ~173 avg / ~182 max, not trustworthy
 | Date | Time | Rank | km/h | W | W/kg | % of PR W | Cad | HR avg/max | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-10-17 18:04 | 2:23 | 1 | 20.8 | 261 | 4.34 | 100 | 87 | -/- | HR data inaccurate and not usable (Pat: 17 Oct, derailleur failure ride) |
-| 2026-09-10 19:01 | 2:38 | 2 | 18.9 | 223 | 3.71 | 85 | 68 | -/- | HR unusable: strap gaps and dropouts 10 Sep min 13-58 (km about 5-22; Pat's screenshot: frozen line km 7.3-13.5 = missing data, drop to 0 at km 13.6) |
+| 2026-10-17 18:04 | 2:23 | 1 | 20.8 | 261 | 4.65 | 100 | 87 | -/- | HR data inaccurate and not usable (Pat: 17 Oct, derailleur failure ride) |
+| 2026-09-10 19:01 | 2:38 | 2 | 18.9 | 223 | 3.97 | 85 | 68 | -/- | HR unusable: strap gaps and dropouts 10 Sep min 13-58 (km about 5-22; Pat's screenshot: frozen line km 7.3-13.5 = missing data, drop to 0 at km 13.6) |
 
 ### Fischenich Berg (979311), 1.05 km, 51 m, 4.9 % - Strava low/high elevation 21-72 m is offset by about -54 m (Edge 75-125 m; Gleise -> Ampel on the same climb matches the Edge within 2 m); the 51 m difference is right. PR HR unusable (17 Oct)
 | Date | Time | Rank | km/h | W | W/kg | % of PR W | Cad | HR avg/max | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-10-17 18:04 | 2:55 | 1 | 21.6 | 257 | 4.28 | 100 | 88 | -/- | HR data inaccurate and not usable (Pat: 17 Oct, derailleur failure ride) |
-| 2026-09-10 19:01 | 3:20 | 2 | 19.0 | 216 | 3.60 | 84 | 71 | -/- | HR unusable: strap gaps and dropouts 10 Sep min 13-58 (km about 5-22; Pat's screenshot: frozen line km 7.3-13.5 = missing data, drop to 0 at km 13.6) |
+| 2026-10-17 18:04 | 2:55 | 1 | 21.6 | 257 | 4.59 | 100 | 88 | -/- | HR data inaccurate and not usable (Pat: 17 Oct, derailleur failure ride) |
+| 2026-09-10 19:01 | 3:20 | 2 | 19.0 | 216 | 3.85 | 84 | 71 | -/- | HR unusable: strap gaps and dropouts 10 Sep min 13-58 (km about 5-22; Pat's screenshot: frozen line km 7.3-13.5 = missing data, drop to 0 at km 13.6) |
 
 ## Observations [mine]
-- Best relative efforts: Kierberger Sprint 29 Sep 301 W for 1:10 (5.0 W/kg, 111% of the PR power, HR to 191, 1 s off the PR set at
-  270 W); Flammgasse Climb 27 Sep 270 W for 2:16 at 79 rpm (HR 184/189); Fischenich Berg Gleise -> Ampel 17 Oct 261 W for 2:23 (4.3 W/kg);
+- Best relative efforts: Kierberger Sprint 29 Sep 301 W for 1:10 (5.4 W/kg, 111% of the PR power, HR to 191, 1 s off the PR set at
+  270 W); Flammgasse Climb 27 Sep 270 W for 2:16 at 79 rpm (HR 184/189); Fischenich Berg Gleise -> Ampel 17 Oct 261 W for 2:23 (4.7 W/kg);
   Mount Phantasialand 27 Sep 248 W for 3:41 (HR 183/189).
 - 27 Sep (the end of the 4-week sprint plan) holds 7 of the 16 PRs; 17 Oct holds 3 (Mühlenbach and both Fischenich segments, with unusable HR); the other 6 are spread
   over 7 Aug - 1 Nov. (Earlier versions said 17 Oct held 4: the Kierberger effort that day is rank 3, not the PR.)

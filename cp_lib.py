@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""cp_lib.py (v1.6, 2026-11-11) - reusable helpers for the 'cycling | running' coaching project.
+"""cp_lib.py (v1.8, 2026-11-12) - reusable helpers for the 'cycling | running' coaching project.
 
 Companion to analysis_tools.py (activity files -> reports / digest) and routes_tool.py (GPX route geometry).
 This module collects everything else that was written ad hoc during the chats:
@@ -23,7 +23,7 @@ import numpy as np
 # ----------------------------------------------------------------------------- CONFIG
 CFG = dict(ftp=180.0,                                                 # working FTP (W) until the 60-min trainer test
            z2cap=135.0, tz="Europe/Berlin", home=(50.8438, 6.8942), sun_site=(50.94, 6.96),
-           mass=72.0, cda=0.38, crr=0.005, rho=1.22, eta=0.98,           # rider+bike+kit 72 kg, hoods position, cool autumn air
+           mass=68.0, cda=0.38, crr=0.005, rho=1.22, eta=0.98,           # rider 56 kg (Pat 12 Nov, measured; 60 kg before) + bike 10.1 + kit ~2 = 68 kg (72 until v1.7); hoods, cool autumn air
            ride_hr_zones=(125, 150, 170, 182), run_hr_zones=(130, 160, 175, 190),
            zone_edges=(0, .55, .75, .90, 1.05, 1.20, 1.50, 99))          # Coggan, as fractions of FTP
 G = 9.81
@@ -144,6 +144,23 @@ class Patch:
         print("saved %s: %d edits ok, %d failed" % (out or self.path, self.n_ok, len(self.fails))); return self.fails
 
 
+def normalize_md(src, dst=None):
+    """Clean a Project doc exported or attached from claude.ai (CRLF line ends, blank lines holding a space, headings glued to the line above):
+    LF line ends, trailing spaces removed, whitespace-only lines emptied, a blank line before every heading outside code fences, one final
+    newline. src = path or text; writes dst if given; returns the text. Content is unchanged (11 Nov: the 18:00 attachments vs the local copies)."""
+    text = open(src, encoding="utf-8").read() if os.path.exists(str(src)) and "\n" not in str(src) else str(src)
+    out, fence = [], False
+    for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        line = line.rstrip()
+        if line.startswith("```"): fence = not fence
+        if not fence and line.startswith("#") and out and out[-1] != "": out.append("")
+        out.append(line)
+    while out and out[-1] == "": out.pop()
+    text = "\n".join(out) + "\n"
+    if dst: open(dst, "w", encoding="utf-8").write(text)
+    return text
+
+
 # ----------------------------------------------------------------------------- FIT
 def _fitfile(path):
     from fitparse import FitFile
@@ -247,6 +264,29 @@ def hrv_quality(path, win_s=60, tol=0.25, flag_pct=5.0):
         rows.append(dict(start_min=k * win_s / 60, beats=int(m.sum()), artefact_pct=round(pct, 1), hr_from_rr=round(60 / np.mean(rr[m & ~bad]), 0) if (m & ~bad).any() else np.nan, flag=pct > flag_pct))
     df = pd.DataFrame(rows)
     return df, {"beats": int(len(rr)), "artefact_pct": round(bad.mean() * 100, 2), "flagged_windows": int(df["flag"].sum()), "windows": int(len(df))}
+
+
+def hr_peak_clean(path, tol=0.12, show=True):
+    """Peak HR from artefact-free beats (FIT 'hrv' messages): checks a new max HR against the strap's own 1-s values. A beat is clean if it lies
+    within `tol` of the median of its 7 neighbours; the peak is the highest mean of 5 and of 10 consecutive clean beats (a 10-beat run may
+    miss one beat). Returns dict(clean_pct, peak5, peak10, at_min = RR time of the 10-beat peak, record_max = max of the record HR).
+    11 Nov: record max 194, clean peaks 192.9 (5 beats) / 192.5 (10 beats), 98.5% clean: the max is genuine, the true peak about 193."""
+    import pandas as pd
+    rr = []
+    for m in _fitfile(path).get_messages("hrv"):
+        rr.extend([x for x in (m.get_value("time") or ()) if x is not None])
+    rr = np.array(rr, float); rr = rr[rr <= 3.0]
+    if len(rr) < 20: return dict(clean_pct=np.nan, peak5=np.nan, peak10=np.nan, at_min=np.nan, record_max=np.nan)
+    med = pd.Series(rr).rolling(7, center=True, min_periods=3).median().values
+    clean = np.abs(rr - med) / med <= tol
+    hr = pd.Series(np.where(clean, 60.0 / rr, np.nan))
+    r5 = hr.rolling(5, min_periods=5).mean().values; r10 = hr.rolling(10, min_periods=9).mean().values
+    i = int(np.nanargmax(r10)); rec = fit_series(path)["hr"]
+    res = dict(clean_pct=float(clean.mean() * 100), peak5=float(np.nanmax(r5)), peak10=float(np.nanmax(r10)), at_min=float(np.cumsum(rr)[i] / 60),
+               record_max=float(np.nanmax(rec)) if np.isfinite(rec).any() else np.nan)
+    if show: print("record HR max %.0f; clean beats %.1f%%; clean peak %.1f bpm (5 beats) / %.1f bpm (10 beats) at RR min %.1f" % (
+        res["record_max"], res["clean_pct"], res["peak5"], res["peak10"], res["at_min"]))
+    return res
 
 
 # ----------------------------------------------------------------------------- LOADING (uses analysis_tools.py)

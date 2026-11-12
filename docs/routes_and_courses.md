@@ -1,4 +1,4 @@
-# Routes and courses: Pat (cycling + running), status 11 Nov 2026
+# Routes and courses: Pat (cycling + running), status 12 Nov 2026
 
 Purpose: one place where Claude finds every route Pat uses, sorted by purpose, so a route can be picked for a session. New routes are analysed with `routes_tool.py` (GitHub repo) and added with the template at the end.
 
@@ -7,6 +7,7 @@ Conventions:
 - Geometry is computed from the GPX: sharp turn = heading change of at least 55° within 100 m; ascent uses 60 m smoothing and a 2 m threshold, so komoot's own figures differ; "wind" names the effect of the two usual wind directions on the longest straight (reversed direction flips it).
 - [Pat] He checks every route himself before using it for efforts. Roads are assumed paved unless he says otherwise; surface, crossing and traffic-light notes are only recorded when he mentions them, komoot alerts only when he flags them.
 - Wind in the area: usually from the south, second most common from the west.
+- Physics model mass [12 Nov]: rider 56 kg (Pat, measured; 60 kg before was never weighed) + bike 10.1 + kit about 2 = 68 kg (cp_lib v1.8); distances computed with 72 kg are about 0.5-1% short on the flat (20 min at 185 W: 9.87 -> 9.94 km calm, 11.93 -> 12.01 km tailwind, 8.02 -> 8.07 km headwind), more on climbs; not recomputed entry by entry.
 - GPX formats [Pat, 7 Nov]: komoot's own export works only for routes inside his unlocked area (Rhein-Erft-Kreis); routes starting outside it are exported with a third-party tool, which writes route points (`<rtept>`, creator "komootGPXport") instead of track points. `routes_tool.py` reads both.
 - Daylight (Cologne, computed): sunset 17:02 on 5 Nov, 16:47 on 15 Nov, 16:32 on 29 Nov, 16:26 on 13 Dec (the earliest); civil dusk about 35-40 min later. Weekday outdoor sessions after about 16:00 need lights and quiet roads; steady efforts belong on the trainer.
 
@@ -45,14 +46,14 @@ Conventions:
   3. He was faster than expected and the wind was lighter, so the end of the 20 min ran into sections meant for recovery and not suited to the test (after leaving the state road at km 31.5). Possible fix: start the 20 min at the beginning of "Vinger Weg" as in the 31 Oct routing.
   - [Pat, 6 Nov] Decision: the route stays as ridden on 1 Nov (komoot 3373226373, unchanged); the issues came mostly from the strap stop, not the route. Keep issues 1-2 in mind (start the 5 min a little earlier; care at the km 24.8 intersection).
   - [mine] On 1 Nov the strap stop and compensation bout used the first 1.9 km of the straight. Started at about km 20.9, a 10 km block would have ended about km 30.9, before the exit.
-- Wind (south stretch, 172°): south wind = headwind, west wind = crosswind, north wind = tailwind. 20 min at 185 W covers about 9.9 km in calm air, about 8.0 km with a 10 km/h headwind and about 11.9 km with a 10 km/h tailwind (my model: 72 kg, CdA 0.38, +0.4%). On 1 Nov: 10.0 km at 183 W in near-calm air (Strava weather NE 4 km/h).
+- Wind (south stretch, 172°): south wind = headwind, west wind = crosswind, north wind = tailwind. 20 min at 185 W covers about 9.9 km in calm air, about 8.0 km with a 10 km/h headwind and about 11.9 km with a 10 km/h tailwind (my model then: 72 kg, CdA 0.38, +0.4%). On 1 Nov: 10.0 km at 183 W in near-calm air (Strava weather NE 4 km/h).
 - Status: 4DP ridden Sun 1 Nov 2026 (results in coach_notes.md); the Sat 31 Oct mock ride used most of the loop. [Pat, 6 Nov] Final 4DP ideally Sun 20 Dec, outdoors on C1 if the weather allows (direct comparison), otherwise on the trainer; tests indoors after that.
 
 ### C28: "ftp" v2 (komoot tour 3386583719, 8 Nov; route export via the third-party tool)
 - Type: loop from home, 62.5 km, +142/-144 m, steepest 500 m about +3.3% / -3.3%, 82-139 m; closes at home.
 - [Pat] Built from solid sections already ridden for an outdoor 60-min FTP test: start at about km 17, end anywhere before km 47 to about 50 depending on wind and form. (The first version of 8 Nov, 48.8 km, was too short: its loop from km 12.8 closed after 23.3 km.)
 - Geometry (29 sharp turns, 0.46/km): km 2.7-9.2 6.5 km WSW (240°); corner cluster km 9.9-13.2 (eight turns); 13.2-15.7 2.5 km NW; 15.9-20.3 4.4 km NW (317°); test part from km 17: four turns at km 20.3 (-105°), 20.8 (+90°), 20.9 (-58°), 21.5 (-76°); 21.5-32.9 11.5 km S (172°, +0.5%) = the C1/C2 state-road stretch (bends at km 24.2/24.4, the intersection Pat flagged on 1 Nov at km 26.0); +94° at 32.9; 32.9-36.5 3.5 km W (262°); +82° at 36.5; 36.5-42.5 6.1 km N (358°, -0.3%); +86° at 42.5; 42.5-50.9 8.4 km E (96°, -0.3%); then -82°/+58° at 50.9/51.1, 2.2 km NE, +84° at 53.3, 6.5 km ENE (60°) and the last corners near home (km 59.8-60.5).
-- [mine] Length check: 60 min at 170-190 W (Stages) covers about 30-31 km in calm air (model 72 kg, CdA 0.38; on 1 Nov 10.0 km in 20 min at 183 W), so from km 17 the hour ends about km 47-48 on the E leg, with 3 km of buffer to the turn at km 50.9. Inside the hour: 7 sharp turns, four of them in the first 4.5 km (km 20.3-21.5, while still fresh), then three 90° corners about 11, 15 and 21 km in. Net +22 m from km 17 to 47 (barely noticeable).
+- [mine] Length check: 60 min at 170-190 W (Stages) covers about 30-31 km in calm air (model then 72 kg, CdA 0.38; on 1 Nov 10.0 km in 20 min at 183 W), so from km 17 the hour ends about km 47-48 on the E leg, with 3 km of buffer to the turn at km 50.9. Inside the hour: 7 sharp turns, four of them in the first 4.5 km (km 20.3-21.5, while still fresh), then three 90° corners about 11, 15 and 21 km in. Net +22 m from km 17 to 47 (barely noticeable).
 - Wind: the legs nearly cancel (S 11.5 km, W 3.5 km, N 6.1 km, E 5-8 km): south wind = headwind on the long S leg and tailwind on the N leg; west wind = headwind on the W leg, tailwind on the E leg (the finish).
 - Status: new on 8 Nov 2026, not ridden as a whole yet; the 60-min test is indoors in week 1 once the new fan is there, this is the outdoor option (a Sunday, for daylight and traffic). Sunset on Sunday 15 Nov 16:47 and 22 Nov 16:38 (Cologne, computed): start the test by about 14:00.
 

@@ -1,4 +1,4 @@
-"""segments_tool.py - Strava segments: reference geometry, effort archive and PR fingerprinting (v1.3, 2026-11-09).
+"""segments_tool.py - Strava segments: reference geometry, effort archive and PR fingerprinting (v1.4, 2026-11-12).
 
 Strava's connector has no segment tool and the bulk export has no segment efforts, so this rebuilds them from the ride files:
   1. segments.json holds each segment's metadata (Pat's Strava values) and a 25-point reference line along its course. The line was taken from
@@ -27,7 +27,7 @@ import pandas as pd
 HERE = os.path.dirname(os.path.abspath(__file__))
 TZ = "Europe/Berlin"
 SC = 180 / 2 ** 31
-RIDER_KG = 60.0
+RIDER_KG = 56.0          # Pat 12 Nov, measured (60 kg until v1.3 was never weighed); only the W/kg column depends on it
 
 
 def hav(a, b, c, d):
