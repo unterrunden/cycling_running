@@ -130,6 +130,7 @@ Counts: PORTED 29, SUPERSEDED 4, PATTERN 6, ONE-OFF 19, HOUSEKEEPING 26, DUPLICA
 - Ad hoc: 191 bpm (29 Sep) confirmed as the highest strap HR in all files.
 
 ## 10 Nov (chat 2)
+- 11 Nov (cp_lib v1.6): `meter_offset(..., align="power", mask=...)`; `aerobic_check` and `hour_test_report` align by power by default (MyWhoosh HR about 4 s late on 11 Nov; power lag 0 s); docstring caveat on the band table next to ERG targets; selfcheck +2 tests on tests/11_11_garmin.fit + 11_11_kickr.fit (HR lag -4 / power lag 0 / KICKR +2% at 120-150 W; aerobic check 0: HR 149.6 / 160.9, ratios 0.979 / 0.991). Ad hoc in chat 3: sprint windows on both meters, the cable-cut window, a clean-beat RR peak (5-/10-beat means of artefact-free beats) for the 194 bpm max.
 - Progress checks for the 6-week plan → `cp_lib.aerobic_check` (cp_lib v1.5): finds the 130 W / 150 W blocks of the aerobic check in a ride file, HR of the last 10 / 5 min, drift, W/HR, optional second recording for the meter ratio; selfcheck test on synthetic data plus the hilly 7 Nov file (no block). The other checks use existing tools (`ride_session` decoupling, `run_series` / `split_table`).
 - `selfcheck.py`: the old 4DP v1 route test (its GPX is no longer in the repo, so it was always skipped) is replaced by the same merge-rule and smoothing check on C1 (4dp v2: 28 / 17 turns, +166/-168 m); the support branch for the old C19 file (approach + loop), the old `rides_runs_gpx_files_*.zip` pattern and old test-file names (`5k_28oct.fit`, `4dp_01_11.fit`) are removed. 37 checks, none skipped with the current zips.
 
@@ -144,7 +145,7 @@ Counts: PORTED 29, SUPERSEDED 4, PATTERN 6, ONE-OFF 19, HOUSEKEEPING 26, DUPLICA
 - The sprint power check needs a lag-corrected window: the speed sensor trails power by 1-2 s.
 - Shell quirks of the sandbox: `/bin/sh` has no `time` builtin and no process substitution; use `bash -c` or temp files.
 - Stream data from the Strava connector cannot be piped into the sandbox: block-level analysis needs the FIT file; a short reduced-resolution stream can be copied into JSON by hand.
-- MyWhoosh start_local can be off by tens of seconds (51 s on 6 Nov): align two recordings by HR, never by the stated start.
+- MyWhoosh start_local can be off by tens of seconds (51 s on 6 Nov): align two recordings by cross-correlation, never by the stated start; by power where both have power (11 Nov: MyWhoosh HR 4 s late).
 - Edge 540 indoors with GPS on: a GPS scribble, 0.13 km and 6 min "moving time" in Strava; Strava's moving time for that file is meaningless.
 - Strava segment elevations (low/high) come from other devices and can be offset by 35-70 m; elevation differences agree with the Edge within about 3 m.
 - HR lag: average HR of a short hard effort says little about strap quality; use the HR at its end.
