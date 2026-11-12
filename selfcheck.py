@@ -181,6 +181,15 @@ def main():
             r7 = cp.meter_offset(cp.fit_series(g7), cp.fit_series(k7), show=False)
             check("KICKR vs Stages 7 Nov (both FITs, 1 Hz): lag -3 s, KICKR about 4% above Stages", abs(r7["lag_s"] + 3) <= 2 and 1.02 < r7["ratio"] < 1.06, "lag %+d s, ratio %.3f" % (r7["lag_s"], r7["ratio"]))
         else: skip("KICKR vs Stages 7 Nov", "tests/07_11_*.fit not in the repo (optional)")
+        g11, k11 = find("tests/11_11_garmin.fit"), find("tests/11_11_kickr.fit")
+        if g11 and k11:
+            gs, ks = cp.fit_series(g11), cp.fit_series(k11); t0 = gs["t"][0]; cut = [(t0 + 3678, t0 + 3814)]     # KICKR power cable out (Edge min 61.3-63.6)
+            rh = cp.meter_offset(gs, ks, show=False, mask=cut); rp = cp.meter_offset(gs, ks, show=False, align="power", mask=cut)
+            ratio = {(row[0], row[1]): row[6] for row in rp["bands"]}       # band rows: (lo, hi, n, other, ref, diff, ratio)
+            check("KICKR vs Stages 11 Nov: MyWhoosh HR 4 s behind the Edge (HR lag -4 s), power lag 0 s, KICKR +2% at 120-150 W",
+                  abs(rh["lag_s"] + 4) <= 1 and abs(rp["lag_s"]) <= 1 and rp["align"] == "p" and 1.01 < ratio[(120, 150)] < 1.03,
+                  "HR lag %+d s, power lag %+d s, 120-150 W ratio %.3f" % (rh["lag_s"], rp["lag_s"], ratio[(120, 150)]))
+        else: skip("KICKR vs Stages 11 Nov", "tests/11_11_*.fit not in the repo (optional)")
     guarded(meters)
 
     def digest():
@@ -210,6 +219,14 @@ def main():
         f = find("tests/07_11_kickr.fit")
         if f: ok.append(not cp.aerobic_check(f, show=False)[0]["found"])      # hilly 7 Nov ride: no steady 130 W block
         check("aerobic_check: finds the 130 W / 150 W blocks, HR of the last 10 min, meter ratio; none on a hilly ride", all(ok), str(ok))
+        k11, g11 = find("tests/11_11_kickr.fit"), find("tests/11_11_garmin.fit")
+        if k11 and g11:
+            a = cp.aerobic_check(k11, other=g11, show=False)
+            check("aerobic_check 11 Nov (check 0, old fan): 130 W HR 149.6, 150 W HR 160.9, Stages/KICKR 0.979 / 0.991",
+                  a[0]["found"] and a[1]["found"] and abs(a[0]["hr_last"] - 149.6) < 0.3 and abs(a[1]["hr_last"] - 160.9) < 0.3
+                  and abs(a[0]["other_ratio"] - 0.979) < 0.005 and abs(a[1]["other_ratio"] - 0.991) < 0.005,
+                  "HR %.1f / %.1f, ratios %.3f / %.3f" % (a[0]["hr_last"], a[1]["hr_last"], a[0]["other_ratio"], a[1]["other_ratio"]))
+        else: skip("aerobic_check 11 Nov", "tests/11_11_*.fit not in the repo (optional)")
     guarded(aerobic)
 
     def virtual_fit_skip():
