@@ -1,6 +1,6 @@
 # History digest: Pat, cycling | running
 
-As of: Strava export of 9 Nov 2026 (strava_export_09_11.zip, 59 activities); activities to 08 Nov; tables updated 9 Nov 2026 (Strava bests as of 9 Nov); section 8 and the 'Strava VirtualRide now' column updated 12 Nov 2026.
+As of: Strava export of 9 Nov 2026 (strava_export_09_11.zip, 59 activities); activities to 08 Nov; tables updated 9 Nov 2026 (Strava bests as of 9 Nov); section 8 and the 'Strava VirtualRide now' column updated 14 Nov 2026.
 
 Source: Strava export of 9 Nov 2026 (strava_export_09_11.zip, 59 activities) analysed with analysis_tools.py v2 and cp_lib.make_history_digest. Outdoor rides: 46 (33 with power, from 29 Aug; without power: 07 Aug-20 Aug, 26 Sep). Virtual rides (MyWhoosh, KICKR power): 6. Runs: 7. FTP for zones: 180 W (working value, Stages scale).
 
@@ -43,9 +43,9 @@ Notes: the 180-min elapsed value is a stop-heavy artefact and not reported. The 
 | 15s | 365 | 06 Nov | 534 (11 Nov) |
 | 30s | 299 | 08 Nov | 433 (11 Nov) |
 | 1min | 272 | 06 Nov | 293 (11 Nov) |
-| 2min | 209 | 03 Nov | 209 (03 Nov) |
-| 3min | 199 | 07 Nov | 199 (07 Nov) |
-| 5min | 182 | 04 Nov | 182 (04 Nov) |
+| 2min | 209 | 03 Nov | 260 (14 Nov) |
+| 3min | 199 | 07 Nov | 260 (14 Nov) |
+| 5min | 182 | 04 Nov | 212 (14 Nov) |
 | 8min | 176 | 04 Nov | 176 (04 Nov) |
 | 10min | 177 | 04 Nov | 177 (04 Nov) |
 | 15min | 172 | 04 Nov | 172 (04 Nov) |
@@ -157,5 +157,6 @@ Totals in the export: 46 outdoor rides, 6 virtual rides, 7 runs (last activity 8
 | 2026-11-10 | Run (U1) | 4.26 recorded (about 5.06 run) | 25:33 (32:44 elapsed) | 6:00/km from lap 2; phone died at 4.25 km; Strava avg HR 127 is wrong (strap flat-lined at 50 for about 10 min); valid HR from km 1.3: about 161; analysis in coach_notes.md |
 | 2026-11-11 | V (KICKR + Edge/Stages) | 33.1 (MyWhoosh) | 69:36 (Edge timer 70:11) | Stages avg 119 W, NP 150; aerobic check 0 (old fan): 130 W HR 149.6, 150 W HR 160.9; one 20 s effort 506 W (Stages), a 10 s effort 516 W, the second 20 s void (KICKR power cable out); HR max 194 (clean peak about 193); RPE 5; FITs in tests/ |
 | 2026-11-12 | V (KICKR + Edge/Stages) | 34.8 (MyWhoosh) | 60:00 (test part only) | 60-min FTP test: Stages 175.1 W (NP 175.3), KICKR 175.4 W; HR 171.3 avg, 172 flat from min 15, last 20 min 173.2, max 183; decoupling +1.2%; cadence 85; fan level 3, room 15 -> 19 C; RPE 7/8/9; planning FTP 175 W |
+| 2026-11-14 | V (KICKR + Edge/Stages) | 34.1 (MyWhoosh) | 101:42 (Edge) | Z2 on a hilly course with gradient feel 5-10%: steady part 113.8 W Stages, HR 130, decoupling 0.0%; one sprint (5 s 359 W); final 3 min at 258.5 W Stages (KICKR 259.6), HR to 182; RPE 3 |
 
-Strava bests (Ride, VirtualRide, Run) unchanged on 10 Nov; on 11 Nov new VirtualRide bests (table 2, indoor). The Garmin copy of the 11 Nov session (uploaded as an indoor 'Ride') holds the Strava Ride 15 s (527 W) and 30 s (438 W) bests: indoor Stages values, not entered in the outdoor table (outdoor 15 s 448, 30 s 397 W); the copy was deleted on 12 Nov (Ride bests 448 / 397 W again). The Garmin copy of the 12 Nov hour test briefly held the Ride 30 / 45 / 60 min bests (176 / 175 / 175 W); deleted the same evening (outdoor 171 / 163 / 157 W again). Planning FTP from 12 Nov: 175 W (the weekly table above still uses the 180 W working value; the next digest run uses 175). Virtual rides now sit on a separate Strava bike 'huh (indoor)'.
+Strava bests (Ride, VirtualRide, Run) unchanged on 10 Nov; on 11 Nov new VirtualRide bests (table 2, indoor). The Garmin copy of the 11 Nov session (uploaded as an indoor 'Ride') holds the Strava Ride 15 s (527 W) and 30 s (438 W) bests: indoor Stages values, not entered in the outdoor table (outdoor 15 s 448, 30 s 397 W); the copy was deleted on 12 Nov (Ride bests 448 / 397 W again). The Garmin copy of the 12 Nov hour test briefly held the Ride 30 / 45 / 60 min bests (176 / 175 / 175 W); deleted the same evening (outdoor 171 / 163 / 157 W again). Planning FTP from 12 Nov: 175 W (the weekly table above still uses the 180 W working value; the next digest run uses 175). The Garmin copy of 14 Nov (an indoor 'Ride') holds the Strava Ride 3-min best (259 W; outdoor 257.7 W, 17 Oct) until Pat deletes it. Virtual rides now sit on a separate Strava bike 'huh (indoor)'.
