@@ -259,6 +259,23 @@ def main():
               "%.1f W, ratio %.3f, LTHR %.1f, decoupling %+.1f%%" % (h["avg_w"], h["other_avg_w"] / h["avg_w"], h["lthr_est"], h["decoupling_pct"]))
     guarded(hour_test)
 
+    def meter_checks():
+        g11, k11, g12, k12 = find("tests/11_11_garmin.fit"), find("tests/11_11_kickr.fit"), find("tests/12_11_garmin.fit"), find("tests/12_11_kickr.fit")
+        if not (g11 and k11 and g12 and k12): return skip("meter_offset checks", "tests/11_11_* or 12_11_*.fit not in the repo (optional)")
+        m11 = cp.meter_offset(cp.fit_series(g11), cp.fit_series(k11), align="power", show=False)
+        m12 = cp.meter_offset(cp.fit_series(g12), cp.fit_series(k12), align="power", show=False)
+        e = m11["erg"]; good = [x["lag_s"] for x in m11["seg"] if x["ok"]]
+        check("meter_offset v1.12 (11 / 12 Nov): ERG holds 129.5 / 149.6 W KICKR = ratio 1.02 / 1.01, segment lags 0 s, no warnings; 12 Nov low r confirmed by segments (note only)",
+              len(e) == 2 and abs(e[0]["other_w"] - 129.5) < 0.5 and abs(e[0]["ratio"] - 1.022) < 0.005 and abs(e[1]["ratio"] - 1.011) < 0.005
+              and good and all(abs(g) <= 1 for g in good) and not m11["warn"] and not m12["warn"] and any("confirm" in x for x in m12["notes"]),
+              "ERG %s, segment lags %s, warnings %s / %s" % ([(round(x["other_w"], 1), round(x["ratio"], 3)) for x in e], good, m11["warn"], m12["warn"]))
+        # synthetic timer freeze: drop 120 s from the middle of the KICKR file and close the gap (what MyWhoosh does)
+        k = cp.fit_series(k11); cut = (k["t"] > k["t"][0] + 3000) & (k["t"] <= k["t"][0] + 3120)
+        kf = {x: k[x][~cut] for x in ("t", "p", "hr", "cad")}; kf["t"] = np.where(kf["t"] > k["t"][0] + 3120, kf["t"] - 120, kf["t"])
+        mf = cp.meter_offset(cp.fit_series(g11), kf, align="power", show=False)
+        check("meter_offset: a synthetic 2-min timer freeze is flagged as piecewise offsets", any("piecewise" in w for w in mf["warn"]), str(mf["warn"]))
+    guarded(meter_checks)
+
     def wprime():
         f = find("tests/01_11.fit")
         if not f: return skip("W' tools", "tests/01_11.fit not in the repo (optional)")

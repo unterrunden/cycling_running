@@ -1,0 +1,29 @@
+week,date,day,session,where,duration,targets,goal,feel,checks,status
+1,2026-11-09,Mon,Rest,-,-,-,Recovery,-,-,done
+1,2026-11-10,Tue,"Run, 4 laps U1",outdoor,"about 5.1 km, 30 min",6:00 /km,First weekly long run (cut short: phone),"easy, RPE 3","long-run check: legs 0 at 24 h, fine at 48 h",done
+1,2026-11-11,Wed,Easy ride + check 0 + openers + short efforts,indoor (old fan),70 min,"130 W 20 min / 150 W 10 min; 20 s 506 W, 10 s 516 W (Stages)",Readiness read before the hour test; device comparison,RPE 5,"check 0: HR 149.6 at 130 W, 160.9 at 150 W",done
+1,2026-11-12,Thu,60-min FTP test,"indoor, fan level 3",60 min test (plus warm-up),result 175.1 W Stages / 175.4 W KICKR,"Planning FTP, LTHR, meter offset at FTP",RPE 7 / 8 / 9,"hour test: FTP 175 W, LTHR 172-173",done
+1,2026-11-13,Fri,Rest (badminton),-,-,-,Recovery,light,-,done
+1,2026-11-14,Sat,Z2 ride (+ unplanned 3-min push),"indoor, fan level 1",101.7 min,Stages 113.8 W steady; push 258.5 W,Aerobic volume,RPE 3,"long-ride log: legs 9.5, hands and saddle slight",done
+1,2026-11-15,Sun,Trainer ride with 5-min and 1-min all-outs,"indoor, fan level 3 for the efforts",1:45-2:00 h,"5 min: start 240-245 W, then 245-250 W, decide at 3:00 (goal 250 W); 1 min all-out; Z2 KICKR 120-130 W (cap 140)",Fresh 5-min and 1-min marks; meter check at 230-300+ W,"efforts all-out (RPE 9-10), the rest easy","go/no-go in the warm-up; both FITs, RPE per effort",today
+2,2026-11-16,Mon,Rest,-,-,-,"Full rest (no school, no school sports)",-,-,planned
+2,2026-11-17,Tue,Aerobic check #1 (baseline) + 1 x 15 min,"indoor, fan level 3 from the start",75-90 min,"10 min 100-120 W; 20 min 130 W; 10 min 150 W (ERG, 85-90 rpm); 5 min easy; 15 min 158-164 W (90-94%); Z2 KICKR 120-130 W (cap 140)",Indoor aerobic baseline (goal a); first steady-state interval (goal c),check blocks easy-steady (RPE 3-4); the 15 min comfortably hard (RPE 6-7),aerobic check #1; interval log; resting HR in the morning; room temperature,planned
+2,2026-11-18,Wed,"Run, 6 laps U1 (7th optional)",outdoor (provisional: best forecast),"about 7.6 km, 46 min (8.9 km, 54 min with lap 7)",6:00-6:10 /km,Long-run build (+1 lap),"conversational, RPE 3-4",long-run check: legs at 24 h and 48 h; 7th-lap rule,planned
+2,2026-11-19,Thu,2 x 10 min steady state,"indoor, fan level 1 -> 3 at the zero offset",60-80 min,"warm-up 10-15 min; 2 x 10 min 158-164 W, 5 min easy between; Z2 KICKR 120-130 W (cap 140)",Steady-state work (goal c),"intervals RPE 6-7, the rest easy",interval log,planned
+2,2026-11-20,Fri,Rest (badminton fine),-,-,-,Recovery before the weekend,light,-,planned
+2,2026-11-21,Sat,Z2 ride,outdoor (C15 / C11 / C14),"50-60 km, 2:00-2:20 h","Stages 115-125 W (cap 135), 85-90 rpm; malto 30-40 g/h","Aerobic volume, first of two outdoor days","easy, RPE 3",long-ride log,planned
+2,2026-11-22,Sun,Long ride: 100 km rehearsal,outdoor (C17 + a few km); start by 12:00,"75-85 km, 3:00-3:15 h",Stages 115-125 W (cap 135) evenly; 40-60 g carbohydrate/h; bib shorts; lights,"Durability (goal b); rehearse kit, fuel and refill for the 100 km","easy all the way, RPE 3-4; no end surges","long-ride log (comfort 0-10, food and drink, RPE); fallback 2:15-2:30 h on the KICKR",planned
+3,2026-11-23,Mon,Rest,-,-,-,Recovery (moves if the run moves),-,-,sketch
+3,2026-11-24,Tue,1 x 15 min steady state,"indoor, fan level 3",60-75 min,15 min 161-168 W (92-96%); Z2 KICKR 120-130 W (cap 140),Steady-state step 2 (goal c),RPE 6-7,interval log,sketch
+3,2026-11-25,Wed,"Run, 7 laps U1","outdoor (by forecast, Mon-Fri)","about 8.9 km, 54 min",6:00-6:10 /km,Long-run build,conversational,long-run check,sketch
+3,2026-11-26,Thu,2 x 10 min steady state,"indoor, fan level 3",60-75 min,2 x 10 min 161-168 W; Z2 KICKR 120-130 W (cap 140),Steady-state step 2 (goal c),RPE 6-7,interval log,sketch
+3,2026-11-27,Fri,Rest,-,-,-,Recovery before the 100 km,-,-,sketch
+3,2026-11-28,Sat,Easy spin,indoor or outdoor,60-75 min,KICKR 120-130 W (cap 140) / Stages 115-125 W (cap 135); no efforts,"Loosen the legs; prepare bike, food and lights","very easy, RPE 2",-,sketch
+3,2026-11-29,Sun,First 100 km (C27),outdoor; start 11:30-12:00,"101 km, about 3:45-4:15 h",Stages 115-125 W (cap 135) evenly; 50-70 g carbohydrate/h; refill stop,Milestone: first 100 km (goal b),"easy, RPE 3-5 late on",long-ride log; Pw:HR decoupling,sketch
+4,2026-11-30,Mon,Rest (school sports possible),-,-,-,Recovery after the 100 km,light,-,sketch
+4,2026-12-01,Tue,Aerobic check #2 + 1 x 20 min,"indoor, fan level 3 from the start",80-95 min,check blocks as on 17 Nov; 20 min 161-168 W; Z2,Aerobic trend (goal a); longer steady state (goal c),RPE 6-7 in the 20 min,aerobic check #2; interval log,sketch
+4,2026-12-02,Wed,"Run, 8 laps U1","outdoor (not Mon, not Thu/Fri)","about 10.1 km, 62 min",6:00-6:10 /km,Long-run build,conversational,long-run check,sketch
+4,2026-12-03,Thu,Z2 ride + 2 openers,indoor,60-75 min,KICKR 120-130 W (cap 140); 2 x 1 min at about 185 W near the end,"Easy volume, legs ready for Saturday","easy, RPE 3",-,sketch
+4,2026-12-04,Fri,Rest,-,-,-,Fresh for the test,-,resting HR on Sat morning,sketch
+4,2026-12-05,Sat,20-min test + Z2,"indoor, fan level 3 (or outdoor: open)",75-90 min,"30 min warm-up with 3 x 1 min at about 185 W; 3 min 175-180 W, then 182-187 W, last 5 min all-out; Z2 after",Mid-plan FTP check; W' recalibration,"all-out, RPE 9-10","test: go/no-go, both FITs, RPE at 5/10/15/20 min",sketch
+4,2026-12-06,Sun,Long trainer ride,indoor,2:00-2:30 h,KICKR 120-130 W (cap 140),Aerobic volume the day after the test,"easy, RPE 3",long-ride log (Edge FIT),sketch

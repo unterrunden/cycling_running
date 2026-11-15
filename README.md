@@ -8,7 +8,7 @@ The repo is public and the sandbox can clone it. Claude cannot push to GitHub: n
 ```sh
 git clone --depth 1 https://github.com/unterrunden/cycling_running repo && cd repo
 pip install fitparse scipy pandas --break-system-packages -q
-python3 selfcheck.py        # 44 checks (under 1 min): every PASS = the toolkit still reproduces the validated numbers
+python3 selfcheck.py        # 46 checks (under 1 min): every PASS = the toolkit still reproduces the validated numbers
 ```
 Then check that the data list below names every file in `tests/`; add missing ones to the next handover. The FTP lives in one place: `cp_lib.CFG['ftp']` (the CLI and all reports read it); after a test that sets a new planning FTP, change only that value.
 
@@ -17,6 +17,7 @@ Data in the repo:
 - `all_routes_<dd_mm>.zip`: the route GPX files (routes_and_courses.md).
 - `segments.json` (definitions + reference lines) and `segments_archive.csv` (every tracked effort, rebuilt by `segments_tool.py`).
 - `docs/`: the Project docs (below).
+- `plans/`: plan tables per block (markdown with the per-day descriptions + CSV for a spreadsheet), e.g. `plan_weeks_1-4.*` (15 Nov).
 - `tests/` (optional test files, one line per date; selfcheck skips a test whose file is missing):
   - 28 Oct: `28_10.fit` (5K trial, Strava-made run FIT)
   - 1 Nov: `01_11.fit` (4DP, Edge/Stages)
@@ -57,14 +58,14 @@ Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded
 - 60-min FTP test (or any long test): `cp.hour_test_report(edge_fit, other=kickr_fit)` (best window, 5-min blocks, halves, decoupling, LTHR estimate = HR of the last 20 min, KICKR vs Stages on the same window).
 - HR quality and zones: `cp.hr_artefact_scan(tl)` (minute ranges where HR cannot match the power: 200 W / 45 s and 150 W / 2 min tiers), `cp.hr_gaps(tl)` (missing HR while riding; Strava draws it as a frozen line); `w = cp.hr_power_windows(tl)` per ride, stacked → `cp.hr_zone_score(w, [133, 148, 162, 173], ftp)` / `cp.hr_zone_optimise(w, ftp)`.
 - Progress checks (coach_notes.md section 7): aerobic check `cp.aerobic_check(kickr_fit, other=edge_fit)` (20 min at 130 W + 10 min at 150 W: HR of the last 10 / 5 min, drift, W/HR, meter ratio); long-ride durability `cp.ride_session(f)` (decoupling); run pace and HR per lap `cp.split_table(cp.run_series(f), 1265)`.
-- Two power meters at once (KICKR vs Stages): `cp.meter_offset(cp.fit_series(edge_fit), cp.fit_series(kickr_fit), align="power")` (v1.6: align by power for MyWhoosh files, whose HR runs about 4 s late; `mask=[(from_epoch, to_epoch)]` drops broken stretches; default align by HR as before; compare blocks by their averages, the band table is biased next to ERG targets; power-band table, linear fit); a stream instead of a FIT: `cp.stream_series(streams, '2026-11-06T15:51:40')`.
+- Two power meters at once (KICKR vs Stages): `cp.meter_offset(cp.fit_series(edge_fit), cp.fit_series(kickr_fit), align="power")` (v1.6: align by power for MyWhoosh files, whose HR runs about 4 s late; `mask=[(from_epoch, to_epoch)]` drops broken stretches; default align by HR as before; compare blocks by their averages, the band table is biased next to ERG targets; power-band table, linear fit; v1.12: `res["erg"]` = same-window averages of every ERG hold, `res["warn"]` flags piecewise offsets from MyWhoosh timer freezes and an unconfirmed weak alignment, `res["notes"]` length differences; per-segment lags: `cp.segment_lags(ref, other)`); a stream instead of a FIT: `cp.stream_series(streams, '2026-11-06T15:51:40')`.
 - Edit markdown safely: `p = cp.Patch('coach_notes.md'); p.rep(old, new, 'tag'); p.insert_after('- [stated] ...', new); p.save('out.md')` (refuses to save if any target is missing). Attached or exported Project docs first through `cp.normalize_md(src, dst)` (CRLF, space-only blank lines, headings).
 
 ## Conventions
 - Elapsed-based = Strava power-curve convention (stopped or paused seconds count as 0 W); rolling / moving = stopped seconds removed, coasting kept (Strava average-power convention).
 - FTP settings in Strava and intervals.icu: 170 W (since 1 Nov); 4DP result 183-184 W; the planning FTP is set after the 60-min trainer test. 4DP Full Frontal: FTP = 100% of the 20-min average. Model and zone defaults live in `cp_lib.CFG`.
 - Local time Europe/Berlin; `activities.csv` timestamps are UTC.
-- Power scales: outdoor = Stages (left-only), indoor = KICKR. So far the KICKR reads about +5 W at Z2 power, about the same at threshold power and normal cadence (7 Nov: +4% overall), about +8% below 60 rpm (6 Nov: +8-10 W). Keep the two apart; settle the offset with `cp.meter_offset` on dual recordings.
+- Power scales: outdoor = Stages (left-only), indoor = KICKR. Settled after five dual-recorded rides (6-14 Nov): the KICKR reads about +2 to +6 W (+2-5%) in Z2, the same within about 2% from tempo to 600 W at normal cadence (hour test 12 Nov: ratio 1.002), and about +8% below 60 rpm (7 Nov). Planning FTP 175 W on both scales; indoor Z2 targets about 5 W above the outdoor ones.
 
 ## Gotchas (details in `SCRIPT_CATALOGUE.md`)
 - Strava-made run FIT files: use the distance field, not speed. Garmin ride FITs have gaps where the timer paused. GPX run distance can over-read; trust Strava's best efforts for runs.
@@ -75,6 +76,7 @@ Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded
 - HR lags 30-90 s: genuine 45-s efforts at 200+ W can average 128-142 bpm; judge strap artefacts by the HR at the end of an effort (or falling HR), not by the average.
 - The Strava connector returns the run/default HR zones (<130/160/175/190), not the cycling set kept in the app.
 - MyWhoosh start times can be off (51 s on 6 Nov): align by cross-correlation (`cp.meter_offset`; by power since 11 Nov: MyWhoosh's Bluetooth HR runs about 4 s behind the Edge's ANT+ HR). Edge 540 HRV messages hold some junk RR values (6-58 s), now ignored. An Edge recording indoors with GPS on draws a scribble and uploads a 0.1 km outdoor "Ride" to Strava: use an indoor profile and delete the duplicate.
+- MyWhoosh freezes its timer when the app is in the background for more than about 10-15 s and drops the frozen time from its file (14 Nov: 4.0 min shorter than the Edge file, offsets growing piecewise): one whole-ride lag is then wrong. `meter_offset` warns (v1.12); use `cp.segment_lags` or the ERG-hold averages (`res["erg"]`), and the Edge file as the duration reference.
 - MyWhoosh FITs carry virtual GPS (sub_sport `virtual_activity`), the Edge indoors records `indoor_cycling`: outdoor tools (segments) skip both.
 - Strava segment power with an auto-paused stop inside the effort counts the stop as 0 W (= the elapsed-based value; 31 Oct, 67 s stop: 147 vs 157 W over recorded samples).
 - A best-effort curve can rise with duration (4 Nov: 10 min 177 W > 8 min 176 W): harder stretches at both ends of the window, not an error.
@@ -140,6 +142,8 @@ Claude hands over the changed files, Pat commits them, then `python3 selfcheck.p
 - `sprint_energy_check`: Plausibility check of a sprint's power (seconds s..e of the timeline): meter energy vs the physics needed for the measured acceleration plus drag.
 - `fit_series`: FIT -> dict(t=epoch seconds, p, hr, cad) of the record messages, for meter_offset().
 - `stream_series`: Strava connector streams (dict with time, watts, heart_rate; any resolution) + the activity's start_local ('2026-11-06T15:51:40') -> dict(t=epoch seconds, p, hr).
+- `segment_lags`: Lag of `other` against `ref` (both fit_series()/stream_series() dicts, same ride) per segment of `seg_s` seconds of the OTHER file, found by power cross-correlation within +-max_lag s.
+- `erg_blocks`: Stretches where `other` holds a constant power (ERG target: every second within +-hold_w W of the stretch median for at least min_s s), with the average of both meters over the same seconds (first and last edge_s s left out).
 - `meter_offset`: Compare two power meters recorded at the same time (e.g. ref = Edge/Stages FIT, other = KICKR via MyWhoosh FIT or stream).
 - `hr_artefact_scan`: Minute ranges where HR cannot match the power (strap artefacts).
 - `hr_gaps`: Stretches of riding (power or speed present) with missing or zero HR (strap lost) of at least min_s seconds (short gaps inside a stretch end it): [(from_min, to_min)].

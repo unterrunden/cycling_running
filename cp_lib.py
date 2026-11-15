@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""cp_lib.py (v1.11, 2026-11-12) - reusable helpers for the 'cycling | running' coaching project.
+"""cp_lib.py (v1.12, 2026-11-15) - reusable helpers for the 'cycling | running' coaching project.
 
 Companion to analysis_tools.py (activity files -> reports / digest) and routes_tool.py (GPX route geometry).
 This module collects everything else that was written ad hoc during the chats:
@@ -572,7 +572,61 @@ def stream_series(streams, start_local, tz=None):
     return dict(t=t0 + np.asarray(streams["time"], float), p=np.asarray(streams.get("watts", []), float), hr=np.asarray(streams.get("heart_rate", []), float))
 
 
-def meter_offset(ref, other, max_lag=180, steady_sd=15.0, bands=(60, 100, 120, 150, 200, 400), show=True, align="hr", mask=None):
+def _grid(s):
+    """fit_series dict -> (t0, P with NaN gaps) on a 1 Hz grid (helper for the meter tools)."""
+    t0 = int(np.floor(np.nanmin(s["t"]))); n = int(np.ceil(np.nanmax(s["t"]))) - t0 + 1
+    P = np.full(n, np.nan); k = (np.asarray(s["t"]) - t0).astype(int); P[k] = np.asarray(s["p"], float)
+    return t0, P
+
+
+def segment_lags(ref, other, seg_s=600, max_lag=240, min_r=0.6, min_sd=8.0, show=True):
+    """Lag of `other` against `ref` (both fit_series()/stream_series() dicts, same ride) per segment of `seg_s` seconds of the OTHER
+    file, found by power cross-correlation within +-max_lag s. Use it when the two files differ in length or a whole-ride alignment
+    looks wrong: MyWhoosh drops frozen time when the app is in the background for more than about 10-15 s (14 Nov: file 4.0 min shorter,
+    offsets growing piecewise), so one lag cannot fit the whole ride. A segment counts as reliable if r >= min_r and its power varies
+    (SD >= min_sd W); steady ERG or Z2 riding has no features to align on (lesson 19). Returns a list of
+    dict(start_min (other clock), lag_s, r, sd_w, ok)."""
+    t0, P = _grid(ref); u0, Q = _grid(other); Pz = np.nan_to_num(P); out = []
+    for a in range(0, len(Q) - seg_s // 2, seg_s):
+        q = Q[a:a + seg_s]; best = (-2.0, 0)
+        if np.isfinite(q).sum() < seg_s // 3: continue
+        for lag in range(-max_lag, max_lag + 1):
+            s0 = u0 + a + lag - t0
+            if s0 < 0 or s0 + len(q) > len(P): continue
+            p = Pz[s0:s0 + len(q)]; m = np.isfinite(q) & (q > 0) & (p > 0)
+            if m.sum() < 60: continue
+            r = np.corrcoef(q[m], p[m])[0, 1]
+            if np.isfinite(r) and r > best[0]: best = (float(r), lag)
+        sd = float(np.nanstd(q)); out.append(dict(start_min=a / 60, lag_s=best[1], r=best[0], sd_w=sd, ok=bool(best[0] >= min_r and sd >= min_sd)))
+    if show:
+        for x in out: print("  other min %5.1f  lag %+4d s  r %.2f  SD %5.1f W%s" % (x["start_min"], x["lag_s"], x["r"], x["sd_w"], "" if x["ok"] else "  (unreliable)"))
+    return out
+
+
+def erg_blocks(ref, other, lag_s=0, hold_w=2.0, min_s=120, edge_s=15):
+    """Stretches where `other` holds a constant power (ERG target: every second within +-hold_w W of the stretch median for at least
+    min_s s), with the average of both meters over the same seconds (first and last edge_s s left out). These block averages are the
+    clean meter comparison when ERG is used: binning by one meter biases the meter_offset band table next to an ERG target. They
+    hardly depend on the alignment (constant power on one side), which also makes them robust to MyWhoosh timer freezes.
+    14 Nov: 15 min at 120 W KICKR = 114.5-115.0 W Stages (+4.7%). Returns a list of dict(start_min, length_s, other_w, ref_w, diff, ratio)."""
+    t0, P = _grid(ref); u0, Q = _grid(other); out = []; i = 0; n = len(Q)
+    while i < n:
+        if not np.isfinite(Q[i]) or Q[i] <= 0: i += 1; continue
+        j = i; lo = hi = Q[i]
+        while j + 1 < n and np.isfinite(Q[j + 1]) and max(hi, Q[j + 1]) - min(lo, Q[j + 1]) <= 2 * hold_w:
+            j += 1; lo = min(lo, Q[j]); hi = max(hi, Q[j])
+        if j - i + 1 >= min_s:
+            a, b = i + edge_s, j + 1 - edge_s; s0 = u0 + a + lag_s - t0
+            if s0 >= 0 and s0 + (b - a) <= len(P):
+                p = P[s0:s0 + b - a]; q = Q[a:b]; m = np.isfinite(p) & np.isfinite(q)
+                if m.sum() > 30:
+                    ow, rw = float(q[m].mean()), float(p[m].mean())
+                    out.append(dict(start_min=i / 60, length_s=int(j - i + 1), other_w=ow, ref_w=rw, diff=ow - rw, ratio=ow / rw if rw > 0 else np.nan))
+        i = j + 1
+    return out
+
+
+def meter_offset(ref, other, max_lag=180, steady_sd=15.0, bands=(60, 100, 120, 150, 200, 400), show=True, align="hr", mask=None, checks=True):
     """Compare two power meters recorded at the same time (e.g. ref = Edge/Stages FIT, other = KICKR via MyWhoosh FIT or stream).
     Both are dicts from fit_series() / stream_series(). Aligns `other` by cross-correlation within +-max_lag s, then compares each
     `other` sample with the ref 5-s mean around it. Steady samples = ref 9-s SD < steady_sd W.
@@ -583,7 +637,11 @@ def meter_offset(ref, other, max_lag=180, steady_sd=15.0, bands=(60, 100, 120, 1
     Caveat: samples are binned by the ref value, so when `other` holds ERG targets the bands next to a target are biased (11 Nov: the
     150 W ERG block put Stages-high seconds into the 150-200 W band, ratio 0.972, while the block averages give 0.991). For blocks, compare
     the averages over the same stretch (aerobic_check, hour_test_report) rather than the band table.
-    Returns dict(lag_s, align, r, n, ratio, fit=(a, b) for other = a*ref + b on steady samples, bands=[(lo, hi, n, other, ref, diff, ratio)]).
+    Returns dict(lag_s, align, r, n, ratio, fit=(a, b) for other = a*ref + b on steady samples, bands=[(lo, hi, n, other, ref, diff, ratio)],
+    erg=erg_blocks(...) (same-window averages of the ERG holds), seg=segment_lags(...) (when checks=True), warn=[str], notes=[str]).
+    Warnings (v1.12): piecewise offsets (reliable segment lags spread by more than 5 s: MyWhoosh timer freezes; then align per segment
+    or use the ERG blocks; 14 Nov: -90 to 0 s) and a weak alignment (r < 0.85) that the reliable segments do not confirm (14 Nov: 0.69;
+    the 12 Nov hour test has r 0.70 from steady power, confirmed by segments, so only a note). Note: lengths differing by more than 60 s.
     6 Nov: KICKR = 0.97 x Stages + 13 W (+8 to +11 W, ratio 1.04 at 190 W, 1.11 at 100 W); MyWhoosh's start time was 51 s off on one file."""
     t0 = int(np.floor(np.nanmin(ref["t"]))); n = int(np.ceil(np.nanmax(ref["t"]))) - t0 + 1
     P = np.full(n, np.nan); H = np.full(n, np.nan); k = (np.asarray(ref["t"]) - t0).astype(int)
@@ -604,9 +662,28 @@ def meter_offset(ref, other, max_lag=180, steady_sd=15.0, bands=(60, 100, 120, 1
         if m.sum(): rows.append((lo, hi, int(m.sum()), float(o[m].mean()), float(r5[m].mean()), float(o[m].mean() - r5[m].mean()), float(o[m].mean() / r5[m].mean())))
     fit = tuple(np.linalg.lstsq(np.vstack([r5[st], np.ones(st.sum())]).T, o[st], rcond=None)[0]) if st.sum() > 10 else (np.nan, np.nan)
     res = dict(lag_s=lag, align=which, r=float(cs.max()), r_hr=float(cs.max()) if which == "hr" else np.nan, n=int(ok.sum()), ratio=float(o.mean() / r5.mean()), fit=fit, bands=rows)
+    warn, notes = [], []
+    d_len = (np.nanmax(ot) - np.nanmin(ot)) - (np.nanmax(ref["t"]) - np.nanmin(ref["t"]))
+    if abs(d_len) > 60: notes.append("recording lengths differ by %+.1f min (other - ref): normal if one was started or stopped earlier "
+                                     "or paused; if the other is shorter over the same ride, look for timer freezes" % (d_len / 60))
+    res["erg"] = erg_blocks(ref, other, lag_s=lag); good = None
+    if checks:
+        seg = segment_lags(ref, other, show=False); res["seg"] = seg; good = [x["lag_s"] for x in seg if x["ok"]]
+        if len(good) >= 2 and max(good) - min(good) > 5:
+            warn.append("piecewise offsets: segment lags %+d to %+d s (timer freezes?): one lag cannot fit the ride; align per segment "
+                        "(segment_lags) or use the ERG blocks" % (min(good), max(good)))
+    if res["r"] < 0.85:
+        if good and all(abs(g - lag) <= 3 for g in good):
+            notes.append("alignment r %.2f is low (little power variation), but the reliable segments confirm the lag" % res["r"])
+        else: warn.append("weak alignment (r %.2f < 0.85), not confirmed by segments: the lag and the band table may be wrong" % res["r"])
+    res["warn"], res["notes"] = warn, notes
     if show:
         print("lag %+d s (%s r %.3f), %d samples, overall ratio %.3f, steady fit other = %.3f x ref %+.1f W" % (lag, which, cs.max(), res["n"], res["ratio"], fit[0], fit[1]))
         for b in rows: print("  ref %3d-%3d W  n %3d  other %.1f  ref %.1f  diff %+.1f W  ratio %.3f" % b)
+        for e in res["erg"]: print("  ERG hold from other min %.1f, %.1f min: other %.1f W, ref %.1f W, diff %+.1f W, ratio %.3f" % (
+            e["start_min"], e["length_s"] / 60, e["other_w"], e["ref_w"], e["diff"], e["ratio"]))
+        for w in notes: print("  note:", w)
+        for w in warn: print("  WARNING:", w)
     return res
 
 

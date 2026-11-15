@@ -1,4 +1,4 @@
-# Project memory mirror: Pat, cycling | running (14 Nov 2026)
+# Project memory mirror: Pat, cycling | running (15 Nov 2026)
 
 Fuller record of everything Pat has stated (facts, wishes, decisions), kept next to the compact Project memory files (topics/cycling.md, running.md, schedule.md, preferences.md). It began as a fallback when memory writes were blocked; since about 7 Nov the memory saves again, and [Pat 11 Nov] this file stays as the detailed, dated record (Markdown holds more than the memory files). Only Pat's statements go here; analyses belong in coach_notes.md.
 
@@ -29,6 +29,7 @@ aliases: [cycling training, power meter, FTP, 4DP, indoor trainer]
 - Strava keeps separate zone sets for run ('default') and ride activities (editable only in the app, not on the website); cycling HR zones: <125, <150, <170, <182, >=183
 - Data conventions: Garmin records every second; Strava's average and weighted average power exclude stopped time but include coasting, while best-effort and power-curve values are elapsed-time based (stops and coasting count)
 - Indoor HR runs higher because of missing airflow (no fan on 3 Nov, a weak one on 4 Nov)
+- 15 Nov: FTP 175 W confirmed as set on Strava, intervals.icu and the Edge; W' 18 kJ confirmed as set in intervals.icu
 
 ## Gear and accounts
 - Cube Attain SL (size 56, 2-3 years old, endurance frame), Shimano 105 mechanical 2x11, 50-34 chainrings, cassette 11-34T, 172.5 mm cranks; Stages R7000 left-crank power meter (single-sided; occasional zero offsets, one on 17 Oct because of cold); Polar H9 strap; Garmin Edge 540 (software 31.33, several data screens); no bike fit yet
@@ -95,6 +96,7 @@ aliases: [cycling training, power meter, FTP, 4DP, indoor trainer]
 - 14 Nov, later: aware that longer outdoor and more intense rides need more malto, and of working on a higher cadence; fan level 1 seems sufficient for easy Z2 rides like 14 Nov, so he will likely keep that level (barely any sweat, airflow felt solid); he rode without a shirt and will probably default to no shirt, wearing one only in specific circumstances (he will say when); bib shorts worn on 14 Nov; used ERG mode (constant 120 W) for about 15 minutes before the final 3-min section, not before that
 - 14 Nov, correction: the bib shorts were worn on 11 Nov too (two rides in total so far); for the hour test on 12 Nov he wore no shorts at all (just underwear): not the most comfortable, but it worked fine, and he may keep it for future all-out efforts (unsure whether it makes a noticeable difference)
 - 14 Nov, recording: the files went out of sync because he switched to Spotify a few times (a podcast, later music); when MyWhoosh is in the background for more than about 10-15 s but less than a full disconnect, it returns him to the same point on the map and freezes the timer until he is back in the app, about 3-4 min in total over the ride; his phone was drained, so he could not use it for audio; he will look for a way to run both on the iPad and keep app switches to a minimum or very short so they do not freeze the timer
+- 15 Nov, fan: level 1 is clearly stronger than the old fan's single level (noticeably, not hugely); level 2 probably only for steady zone 3 riding; undecided which level to use for the steady-state intervals (changing it means stepping off the bike before each one)
 - 12 Nov: times in the doc headers are not needed (Claude had written a wrong 23:00); leave times out unless they matter
 - 12 Nov: wants the same detailed breakdown (strengths and weaknesses within a test, what the numbers tell) for future tests; asked for a deep-dive into how intervals.icu (or generally) calculates W' and for a workable value to enter there after the FTP increase; asked whether the Garmin copy of the hour test can be removed from Strava (kept it until Claude had finished)
 - 12 Nov test recordings: neither file includes warm-up or cool-down, only the test part; he followed the warm-up procedure except 2 rather than 3 one-minute openers at about 200 W; did no cool-down (felt solid quickly); has never really done cool-downs after his most intense runs either; would prefer to leave cool-downs out after tests and benchmarks unless Claude wants to keep them
@@ -132,6 +134,11 @@ aliases: [cycling training, power meter, FTP, 4DP, indoor trainer]
 - First 100 km route: komoot "century" (tour 3379567079), his current plan for the first 100 km ride; he may adjust it slightly
 - Future: separate later plans of 8/10/12 weeks with a similar blueprint but more intense, plus plans for other foci
 - After the plan wants about 2 runs a week (possibly 6 workouts: 4 rides + 2 runs), but in winter a variable 0-2 depending on weather; wants the further tests (controlled max 20-min test on the trainer, 60-min effort or ramp test) sooner rather than later
+- 15 Nov: Mon 16 Nov is a full rest day (no school that day, so no school sports)
+- 15 Nov: wants a new full table for weeks 1-4 (including the completed week-1 sessions) as a CSV and as a markdown file with the table plus a description per day (goal, effort and so on)
+- 15 Nov: ride descriptions in the docs should be compact: keep new or relevant data (e.g. a good feel, low HR), trim older rides that add little data, but do not delete mentions or analyses entirely
+- 15 Nov: considering light home strength and mobility training on the side (every couple of days or daily; beginner-friendly, household items, no gym, brief; to support weight gain and cycling); logged only lightly, not part of the main plan; asked for Claude's view and some exercises
+- 15 Nov: on the toolkit ideas (meter_offset warnings etc.), Claude may do whatever is sensible, ask if needed and tinker freely
 
 ## Routes
 - Wants a routes-and-courses file for both sports (routes_and_courses.md in the Project knowledge); sent 24 route GPX files on 30 Oct and more on 5 Nov (komoot: 20km uninterrupted 3379318400, 30km uninterrupted 3379328216, 30km loop 3379330088, 50km loop 3379348878, 100km 3 3379365619, 111km 3379483490, century 3379567079); the 19 saved Strava routes can be added where they do not overlap existing routes
@@ -198,3 +205,4 @@ aliases: [school breaks, school holidays]
 
 - NRW school autumn break 17 Oct to 31 Oct 2026 (Sun 1 Nov also free); Christmas break 23 Dec 2026 to 6 Jan 2027; occasional school-specific free days to be shared when they occur (school sometimes starts later, e.g. Wed 4 Nov)
 - Weekly commitments: school sports every Thursday (not intense) and every second Monday (had it on Mon 2 Nov; confirmed 16 Nov, 30 Nov, 14 Dec; sometimes cancelled, he will say); non-competitive badminton on Fridays is inconsistent (sometimes 2-3 weeks without) and usually does not happen during school breaks; it is never long or intense, so no session (mainly Saturday) needs toning down for it; he went on Fri 6 Nov; no other appointments for the plan period so far; he will tell me about new ones and any upcoming school-free days
+- 15 Nov: Mon 16 Nov no school (compensation day), so no school sports; unsure whether school sports happen in the coming week, he will say
