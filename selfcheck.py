@@ -153,8 +153,33 @@ def main():
         r = cp.run_finish_report(f, show=False); sp = [round(s["time_s"] * 1000 / (s["to_m"] - s["from_m"])) for s in r["splits"]]
         check("5K 28 Oct: km splits 5:04 4:57 4:51 4:35 4:03", all(abs(x - y) <= 1 for x, y in zip(sp, [304, 297, 291, 275, 243])), str([cp.fmt_t(x) for x in sp]))
         check("5K 28 Oct: second half 11.6-11.8% faster", 11.3 < r["halves"]["faster_pct"] < 12.0, "%.1f%%" % r["halves"]["faster_pct"])
-        check("5K 28 Oct: HR zones 17% / 68% / 16% (run zones)", abs(r["zones"][2] - 0.17) < 0.02 and abs(r["zones"][3] - 0.68) < 0.02 and abs(r["zones"][4] - 0.16) < 0.02, str([round(x, 2) for x in r["zones"]]))
+        old = cp.hr_zone_time(cp.run_series(f)["hr"], [130, 160, 175, 190])
+        check("5K 28 Oct: HR zones 14 / 65 / 21% (run zones since 17 Nov: 150/164/173/188; old set 17 / 68 / 16%)",
+              abs(r["zones"][2] - 0.14) < 0.02 and abs(r["zones"][3] - 0.65) < 0.02 and abs(r["zones"][4] - 0.21) < 0.02 and abs(old[2] - 0.17) < 0.02 and abs(old[3] - 0.68) < 0.02 and abs(old[4] - 0.16) < 0.02,
+              "%s / old %s" % ([round(x, 2) for x in r["zones"]], [round(x, 2) for x in old]))
     guarded(run5k)
+
+    def run_zone_tools():
+        v = cp.vdot(5000, 1410); p30, p60 = cp.vdot_pace(v, 30), cp.vdot_pace(v, 60); fz = cp.friel_run_hr_zones(181)
+        check("run zones: VDOT 41.2 (23:30 5K), all-out 30 / 60 min 4:45 / 4:56, Friel Z4 at LTHR 181 = 172-180",
+              abs(v - 41.2) < 0.1 and abs(p30 - 285) < 2 and abs(p60 - 296) < 2 and fz[3] == ("Z4", 172, 180), "VDOT %.2f, %s / %s, %s" % (v, cp.fmt_t(p30), cp.fmt_t(p60), fz[3]))
+        f = find("28_10.fit")
+        if f:
+            r = cp.run_tt_report(f, show=False)
+            check("run_tt_report 28 Oct 5K: HR 181.8 average, 184.1 over the last 20 min, drift about +0.5 bpm/min",
+                  abs(r["hr_avg"] - 181.8) < 0.4 and abs(r["hr_last"] - 184.1) < 0.4 and 0.3 < r["drift_bpm_min"] < 0.65, "%.1f / %.1f, %+.2f" % (r["hr_avg"], r["hr_last"], r["drift_bpm_min"]))
+        else: skip("run_tt_report 28 Oct", "tests/28_10.fit not in the repo (optional)")
+        if not csv: return skip("run HR-pace model and zone fit", "no strava_export_*.zip found")
+        df = cp.load_activities_csv(csv); runs = df[df["type"].str.contains("Run") & (df["date"] <= "2026-10-28")]
+        bad = {"2026-10-23": [(22, 31)], "2026-10-26": [(17.3, 20.7)]}            # frozen strap values (held HR during stops / 186 s at 181)
+        wins = {d: cp.run_hr_pace_windows(cp.run_1hz(os.path.join(act_dir, fn), bad=bad.get(d))) for d, fn in zip(runs["date"], runs["file"])}
+        mdl = cp.run_hr_pace_model(wins, exclude=("2026-10-12",))
+        W = np.vstack([wins[d] for d in wins if d != "2026-10-12"]); o = cp.run_hr_zone_optimise(W, [386, 333, 299, 280], step=1)
+        check("run HR-pace model (6 runs, 12 Oct heat excluded): 6.7 bpm per km/h, HR at 5:00 about 173; zone fit Z2/Z3 161-164, Z4/Z5 183-186",
+              sum(len(w) for w in wins.values()) == 162 and abs(mdl["slope"] - 6.68) < 0.1 and abs(mdl["hr_at"](300) - 173) < 1
+              and 160 <= o["edges"][1] <= 165 and 183 <= o["edges"][3] <= 186,
+              "%d windows, slope %.2f, HR@5:00 %.1f, fit %s (bal %.2f)" % (sum(len(w) for w in wins.values()), mdl["slope"], mdl["hr_at"](300), o["edges"], o["balanced"]))
+    guarded(run_zone_tools)
 
     def fourdp():
         f = find("01_11.fit")

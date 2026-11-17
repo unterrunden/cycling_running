@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""cp_lib.py (v1.12, 2026-11-15) - reusable helpers for the 'cycling | running' coaching project.
+"""cp_lib.py (v1.13, 2026-11-17) - reusable helpers for the 'cycling | running' coaching project.
 
 Companion to analysis_tools.py (activity files -> reports / digest) and routes_tool.py (GPX route geometry).
 This module collects everything else that was written ad hoc during the chats:
@@ -9,6 +9,8 @@ This module collects everything else that was written ad hoc during the chats:
   FIT        inspection of FIT files: structure, laps, timer events, pauses, HRV / strap quality
   RIDE       10-min block tables, best windows (power, HR, distance, speed), decoupling, HR by power, effort finder
   RUN        splits, halves, tail paces, fastest windows (reps), HR plateaus / steps / zone time, loop length
+  RUN ZONES  1 Hz run series, steady HR-pace windows, HR-pace model with day offsets, HR-zone scoring / fit against pace zones,
+             Friel run zones, VDOT / Riegel paces, time-trial report (LTHR estimate)
   TESTS      4DP / Full Frontal report (sprints with a physics check, blocks, gaps, strap quality)
   W' / CP    W' balance (Skiba integral and differential), W' needed by a ride, power-duration fits (2P CP, Morton 3P)
   CSV/DIGEST Strava activities.csv loader, weekly table, bests table, history_digest.md generator
@@ -25,7 +27,7 @@ import numpy as np
 CFG = dict(ftp=175.0,                                                 # planning FTP (W) from the 60-min trainer test of 12 Nov (Stages 175.1, KICKR 175.4); 180 W working value before
            z2cap=135.0, tz="Europe/Berlin", home=(50.8438, 6.8942), sun_site=(50.94, 6.96),
            mass=68.0, cda=0.38, crr=0.005, rho=1.22, eta=0.98,           # rider 56 kg (Pat 12 Nov, measured; 60 kg before) + bike 10.1 + kit ~2 = 68 kg (72 until v1.7); hoods, cool autumn air
-           ride_hr_zones=(132, 148, 162, 177), run_hr_zones=(130, 160, 175, 190),   # cycling Z1-Z4 upper edges (Pat 8 Nov; was 125/150/170/182), Strava run set
+           ride_hr_zones=(132, 148, 162, 177), run_hr_zones=(150, 164, 173, 188), run_lthr=181.0,   # cycling Z1-Z4 upper edges, inclusive (Pat 8 Nov; was 125/150/170/182); run zones as exclusive bounds (Z1 <150 ... Z5 >=188; Pat 17 Nov, was 130/160/175/190), run LTHR (17 Nov)
            zone_edges=(0, .55, .75, .90, 1.05, 1.20, 1.50, 99))          # Coggan, as fractions of FTP
 G = 9.81
 
@@ -480,7 +482,7 @@ def hr_steps(hr, win=10, thr=6.0):
 
 
 def hr_zone_time(hr, edges=None):
-    """Share of valid HR seconds per zone. edges = upper bounds of zones 1..n-1 (default: run zones 130/160/175/190). Returns list of fractions."""
+    """Share of valid HR seconds per zone. edges = upper bounds of zones 1..n-1 (default: CFG run zones, since 17 Nov 150/164/173/188 = Z1 <=149, Z2 150-163, Z3 164-172, Z4 173-187, Z5 >=188; before 130/160/175/190). Returns list of fractions."""
     edges = edges or CFG["run_hr_zones"]; h = np.asarray(hr, float); h = h[np.isfinite(h)]; e = [0] + list(edges) + [999]
     return [float(((h >= lo) & (h < hi)).mean()) for lo, hi in zip(e[:-1], e[1:])]
 
@@ -503,6 +505,150 @@ def run_finish_report(path, step=1000, show=True):
         print("tails: " + ", ".join("last %d m %s/km" % (L, fmt_t(v[1])) for L, v in out["tails"].items()))
         print("HR zone shares (run zones): " + " ".join("%.0f%%" % (x * 100) for x in out["zones"]))
         print("HR plateaus (>=8 identical): %s, NaN seconds %d; loop length %s m" % (["%.0fs x%d @%.0f" % x for x in out["plateaus"][0]], out["plateaus"][1], out["loop_m"]))
+    return out
+
+
+# ----------------------------------------------------------------------------- RUN ZONES
+def run_1hz(path, stop_s=20, bad=None):
+    """GPX / FIT run -> 1 Hz dict for HR-zone and threshold work: T (s), D (m; FIT: the recorded distance field, GPX: positions),
+    V (m/s, 30-s centred), H (bpm; NaN where not recorded or blanked by `bad` = [(from_min, to_min)] on the elapsed clock, e.g.
+    frozen strap values), E, rec (recorded second), stop (inside a gap or a standstill of >= stop_s s), cont (s of continuous running
+    since the start or the last stop: HR kinetics), n."""
+    at = _at(); a, ex = at.load_any(str(path)); t = a[:, 0] - a[0, 0]
+    dd = np.asarray(ex.get("dist"), float) if ex.get("dist") is not None else None
+    if dd is not None and np.isfinite(dd).sum() > 0.5 * len(t):
+        ok = np.isfinite(dd); d = np.interp(t, t[ok], dd[ok]) - dd[ok][0]
+    else:
+        d = np.concatenate([[0], np.cumsum(at.haversine(a[:-1, 1], a[:-1, 2], a[1:, 1], a[1:, 2]))])
+    n = int(t[-1]) + 1; T = np.arange(n); D = np.interp(T, t, d)
+    H = np.full(n, np.nan); hv = a[:, 5].astype(float); m = np.isfinite(hv) & (hv > 30); H[t[m].astype(int)] = hv[m]
+    E = np.interp(T, t, a[:, 3]) if np.isfinite(a[:, 3]).any() else np.full(n, np.nan)
+    rec = np.zeros(n, bool); rec[t.astype(int)] = True
+    V = np.full(n, np.nan); V[15:n - 15] = (D[30:] - D[:n - 30]) / 30.0
+    v5 = np.zeros(n); v5[2:n - 3] = (D[5:] - D[:n - 5]) / 5.0
+    still = ~rec | (v5 < 0.8); stop = np.zeros(n, bool); i = 0
+    while i < n:
+        if still[i]:
+            j = i
+            while j < n and still[j]: j += 1
+            if j - i >= stop_s: stop[i:j] = True
+            i = j
+        else: i += 1
+    cont = np.zeros(n); c = 0
+    for k in range(n):
+        c = 0 if stop[k] else c + 1; cont[k] = c
+    for x, y in (bad or []): H[int(x * 60):int(y * 60)] = np.nan
+    return dict(T=T, D=D, V=V, H=H, E=E, rec=rec, stop=stop, cont=cont, n=n)
+
+
+def run_hr_pace_windows(r, win_s=180, step_s=30, hr_last_s=60, min_cont_s=360, max_cv=0.08, min_speed=1.8):
+    """Quasi-steady windows of one run (r = run_1hz() dict, or a path) for HR-zone and threshold work: every `step_s` a `win_s`
+    window without stops whose 30-s speeds vary by at most `max_cv` (CV) and which ends at least `min_cont_s` into continuous
+    running; HR = mean of its last `hr_last_s` s (HR lags 30-90 s). Returns an array of rows
+    (end_min, pace_s_km, speed_m_s, hr_last, hr_mean, cont_min). 17 Nov: 162 windows from the seven export runs (3-28 Oct)."""
+    if not isinstance(r, dict): r = run_1hz(r)
+    D, H, stop, cont, n = r["D"], r["H"], r["stop"], r["cont"], r["n"]; out = []
+    for e in range(win_s, n, step_s):
+        s = e - win_s
+        if stop[s:e].any() or cont[e - 1] < min_cont_s: continue
+        v = np.diff(D[s:e + 1:30]) / 30.0
+        if len(v) < 3 or v.mean() < min_speed or v.std() / v.mean() > max_cv: continue
+        h = H[e - hr_last_s:e]
+        if np.isfinite(h).mean() < 0.9: continue
+        sp = (D[e] - D[s]) / win_s
+        out.append((e / 60, 1000 / sp, sp, float(np.nanmean(h)), float(np.nanmean(H[s:e])), cont[e - 1] / 60))
+    return np.array(out).reshape(-1, 6)
+
+
+def run_hr_pace_model(wins, exclude=()):
+    """HR (last minute of each window) = slope x speed (km/h) + one offset per run, fitted on {run_name: run_hr_pace_windows array}
+    (runs in `exclude` left out, e.g. a hot day). The slope comes from the speed changes within runs; the offsets are the day effects
+    (state, weather, warm-up, and the HR slow component of hard sessions). Returns dict(slope, offsets, mean_offset, resid_sd,
+    hr_at=function(pace_s_km, offset=None)). 17 Nov (6 runs, 12 Oct heat excluded): 6.7 bpm per km/h, offsets -5.9 to +6.1, resid SD 2.3;
+    HR at 6:00 / 5:00 / 4:46 = 160 / 173 / 177 on a mean day; 12 Oct (heat, after travel) +9.8 bpm above the model."""
+    names = [k for k in wins if k not in exclude and len(wins[k])]
+    W = np.vstack([wins[k] for k in names]); lab = np.concatenate([[k] * len(wins[k]) for k in names])
+    X = np.column_stack([W[:, 2] * 3.6] + [(lab == k).astype(float) for k in names]); c, *_ = np.linalg.lstsq(X, W[:, 3], rcond=None)
+    off = dict(zip(names, c[1:])); mo = float(np.mean(c[1:]))
+    return dict(slope=float(c[0]), offsets={k: float(v - mo) for k, v in off.items()}, mean_offset=mo, resid_sd=float((W[:, 3] - X @ c).std()),
+                hr_at=lambda pace, offset=None: c[0] * 3600.0 / pace + (mo if offset is None else mo + offset))
+
+
+def friel_run_pace_edges(tp):
+    """Friel's run pace zones collapsed to 5 (Z5 = 5a-5c) for a threshold pace `tp` (s/km; Friel: the average pace of a solo
+    30-min time trial): slowest-first edges Z1|Z2|Z3|Z4|Z5 = 129%, 113.5%, 105.5%, 99.5% of tp (TrainingPeaks 'Quick guide')."""
+    return [tp * 1.29, tp * 1.135, tp * 1.055, tp * 0.995]
+
+
+def friel_run_hr_zones(lthr):
+    """Friel's run HR zones (% of LTHR: Z1 <85, Z2 85-89, Z3 90-94, Z4 95-99, Z5a 100-102, Z5b 103-106, Z5c >106) in bpm."""
+    pc = [("Z1", 0, 85), ("Z2", 85, 90), ("Z3", 90, 95), ("Z4", 95, 100), ("Z5a", 100, 103), ("Z5b", 103, 107), ("Z5c", 107, 999)]
+    return [(z, int(math.ceil(lthr * a / 100)), int(math.ceil(lthr * b / 100)) - 1 if b < 999 else None) for z, a, b in pc]
+
+
+def run_hr_zone_score(win, hr_edges, pace_edges, min_n=6):
+    """How well 5 HR zones (upper edges, e.g. [150, 164, 173, 188]: Z1 < 150 ...; Pat's set from 17 Nov) reproduce the pace zone (slowest-first pace edges in
+    s/km, e.g. friel_run_pace_edges(286) or Strava's auto zones [386, 333, 299, 280]) of each window (run_hr_pace_windows rows).
+    Returns dict(balanced = mean recall over pace zones with >= min_n windows, exact, within1, recall, n)."""
+    w = np.asarray(win); z = 1 + np.sum(w[:, 1][:, None] < np.asarray(pace_edges)[None, :], axis=1); hz = np.digitize(w[:, 3], hr_edges) + 1
+    rec = {k: float((hz[z == k] == k).mean()) for k in range(1, 6) if (z == k).sum() >= min_n}
+    return dict(balanced=float(np.mean(list(rec.values()))) if rec else np.nan, exact=float((hz == z).mean()), within1=float((np.abs(hz - z) <= 1).mean()),
+                recall=rec, n={k: int((z == k).sum()) for k in range(1, 6)})
+
+
+def run_hr_zone_optimise(win, pace_edges, z1=150, grid=((152, 172), (155, 182), (165, 192)), tol=0.02, step=1):
+    """Grid search of the Z2/Z3, Z3/Z4 and Z4/Z5 run HR edges (Z1 edge fixed: hardly any windows slower than recovery pace) that
+    maximise run_hr_zone_score's balanced accuracy; also the range of each edge over all sets within `tol` of the best (how well the
+    data pin it down). 17 Nov (6 runs, 136 windows): vs Strava pace zones 161 / 171 / 184 (plateau 161-164 / 168-180 / 183-186),
+    vs Friel zones at 4:46 164 / 178 / 184 (162-164 / 168-181 / 183-185): the Z3/Z4 edge is not pinned down yet."""
+    res = []
+    for a in range(grid[0][0], grid[0][1], step):
+        for b in range(max(a + 3, grid[1][0]), grid[1][1], step):
+            for c in range(max(b + 3, grid[2][0]), grid[2][1], step):
+                res.append((run_hr_zone_score(win, [z1, a, b, c], pace_edges)["balanced"], a, b, c))
+    res = np.array(res); best = res[np.argmax(res[:, 0])]; near = res[res[:, 0] >= best[0] - tol]
+    return dict(edges=[z1] + [int(x) for x in best[1:]], balanced=float(best[0]),
+                plateau=[(int(near[:, k].min()), int(near[:, k].max())) for k in (1, 2, 3)], n_near=len(near))
+
+
+def vdot(dist_m, time_s):
+    """Daniels-Gilbert VDOT of a race performance. 28 Oct 5K 23:30 -> 41.2."""
+    t = time_s / 60.0; v = dist_m / t; vo2 = -4.60 + 0.182258 * v + 0.000104 * v * v
+    return vo2 / (0.8 + 0.1894393 * math.exp(-0.012778 * t) + 0.2989558 * math.exp(-0.1932605 * t))
+
+
+def vdot_pace(vd, minutes=None, frac=None):
+    """Pace (s/km) for a VDOT: the all-out pace for an effort of `minutes` (Daniels-Gilbert %VO2max-duration curve) or the pace at a
+    fraction `frac` of VO2max (Daniels' threshold pace is about 0.88). VDOT 41.2: 30 min 4:45, 60 min 4:56, 88% 4:58."""
+    if frac is None: frac = 0.8 + 0.1894393 * math.exp(-0.012778 * minutes) + 0.2989558 * math.exp(-0.1932605 * minutes)
+    a, b, c = 0.000104, 0.182258, -4.60 - vd * frac
+    return 60000.0 / ((-b + math.sqrt(b * b - 4 * a * c)) / (2 * a))
+
+
+def riegel_time(d1_m, t1_s, d2_m, k=1.06):
+    """Riegel prediction t2 = t1 (d2/d1)^k. 23:30 5K -> 30-min distance about 6.29 km (4:46/km), 60-min about 12.1 km (4:58/km)."""
+    return t1_s * (d2_m / d1_m) ** k
+
+
+def run_tt_report(path, last_s=1200, bad=None, show=True):
+    """Hard continuous run (time trial, 5K race, Friel's 30-min test): distance, time, pace, VDOT, HR average, HR of the last
+    `last_s` s (Friel's LTHR estimate when the effort is a solo 30-min TT; a 5K reads 1-2 bpm higher), HR at the 10-min mark,
+    per-km pace and HR, HR drift (bpm/min, speed-adjusted, from the steady windows). 28 Oct 5K: 23:31 in counted seconds (Strava 23:30), VDOT 41.2, HR 181.8 average,
+    184.1 over the last 20 min, km HR 171 / 179 / 183 / 186 / 192."""
+    r = run_1hz(path, bad=bad); H, D, n = r["H"], r["D"], r["n"]; mv = ~r["stop"]; secs = int(mv.sum())
+    km = []
+    for k in range(int(D[-1] // 1000)):
+        a = int(np.argmax(D >= k * 1000)); b = int(np.argmax(D >= (k + 1) * 1000 - 0.5)); km.append(dict(km=k + 1, time_s=b - a, hr=float(np.nanmean(H[a:b]))))
+    w = run_hr_pace_windows(r); drift = np.nan
+    if len(w) >= 5:
+        c, *_ = np.linalg.lstsq(np.column_stack([w[:, 2] * 3.6, w[:, 5], np.ones(len(w))]), w[:, 3], rcond=None); drift = float(c[1])
+    out = dict(dist_m=float(D[-1]), time_s=secs, pace=secs / D[-1] * 1000, vdot=vdot(D[-1], secs) if D[-1] > 1500 else np.nan,
+               hr_avg=float(np.nanmean(H[mv])), hr_last=float(np.nanmean(H[mv][-last_s:])), hr_10min=float(np.nanmean(H[570:630])) if n > 630 else np.nan,
+               hr_max=float(np.nanmax(H)), km=km, drift_bpm_min=drift)
+    if show:
+        print("%.2f km in %s (%s/km), VDOT %.1f; HR avg %.1f, last %d min %.1f, at 10 min %.0f, max %.0f; drift %+.2f bpm/min" % (
+            out["dist_m"] / 1000, fmt_t(secs), fmt_t(out["pace"]), out["vdot"], out["hr_avg"], last_s // 60, out["hr_last"], out["hr_10min"], out["hr_max"], drift))
+        print("km: " + " | ".join("%s HR %.0f" % (fmt_t(x["time_s"]), x["hr"]) for x in km))
     return out
 
 

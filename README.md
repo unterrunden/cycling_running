@@ -8,7 +8,7 @@ The repo is public and the sandbox can clone it. Claude cannot push to GitHub: n
 ```sh
 git clone --depth 1 https://github.com/unterrunden/cycling_running repo && cd repo
 pip install fitparse scipy pandas --break-system-packages -q
-python3 selfcheck.py        # 46 checks (under 1 min): every PASS = the toolkit still reproduces the validated numbers
+python3 selfcheck.py        # 49 checks (about 1 min): every PASS = the toolkit still reproduces the validated numbers
 ```
 Then check that the data list below names every file in `tests/`; add missing ones to the next handover. The FTP lives in one place: `cp_lib.CFG['ftp']` (the CLI and all reports read it); after a test that sets a new planning FTP, change only that value.
 
@@ -58,6 +58,7 @@ Newer activities: the Strava connector gives summaries; FIT / GPX files uploaded
 - 60-min FTP test (or any long test): `cp.hour_test_report(edge_fit, other=kickr_fit)` (best window, 5-min blocks, halves, decoupling, LTHR estimate = HR of the last 20 min, KICKR vs Stages on the same window).
 - HR quality and zones: `cp.hr_artefact_scan(tl)` (minute ranges where HR cannot match the power: 200 W / 45 s and 150 W / 2 min tiers), `cp.hr_gaps(tl)` (missing HR while riding; Strava draws it as a frozen line); `w = cp.hr_power_windows(tl)` per ride, stacked → `cp.hr_zone_score(w, [133, 148, 162, 173], ftp)` / `cp.hr_zone_optimise(w, ftp)`.
 - Progress checks (coach_notes.md section 7): aerobic check `cp.aerobic_check(kickr_fit, other=edge_fit)` (20 min at 130 W + 10 min at 150 W: HR of the last 10 / 5 min, drift, W/HR, meter ratio); long-ride durability `cp.ride_session(f)` (decoupling); run pace and HR per lap `cp.split_table(cp.run_series(f), 1265)`.
+- Running threshold HR and HR zones (17 Nov): `r = cp.run_1hz(f, bad=[(from_min, to_min)])` (1 Hz series; blank frozen strap values), `w = cp.run_hr_pace_windows(r)` (steady 3-min windows, HR of the last minute), `m = cp.run_hr_pace_model({name: w, ...}, exclude=(...))` (bpm per km/h + day offsets; `m['hr_at'](300)` = HR at 5:00/km), `cp.run_hr_zone_score(W, [150, 164, 173, 188], [386, 333, 299, 280])` / `cp.run_hr_zone_optimise(W, pace_edges)` (HR zones vs Strava or `cp.friel_run_pace_edges(tp)` pace zones), `cp.friel_run_hr_zones(lthr)`, `cp.vdot(5000, 1410)` / `cp.vdot_pace(v, minutes)` / `cp.riegel_time(...)`, `cp.run_tt_report(f)` (time trial or 5K: HR of the last 20 min = Friel's LTHR estimate).
 - Two power meters at once (KICKR vs Stages): `cp.meter_offset(cp.fit_series(edge_fit), cp.fit_series(kickr_fit), align="power")` (v1.6: align by power for MyWhoosh files, whose HR runs about 4 s late; `mask=[(from_epoch, to_epoch)]` drops broken stretches; default align by HR as before; compare blocks by their averages, the band table is biased next to ERG targets; power-band table, linear fit; v1.12: `res["erg"]` = same-window averages of every ERG hold, `res["warn"]` flags piecewise offsets from MyWhoosh timer freezes and an unconfirmed weak alignment, `res["notes"]` length differences; per-segment lags: `cp.segment_lags(ref, other)`); a stream instead of a FIT: `cp.stream_series(streams, '2026-11-06T15:51:40')`.
 - Edit markdown safely: `p = cp.Patch('coach_notes.md'); p.rep(old, new, 'tag'); p.insert_after('- [stated] ...', new); p.save('out.md')` (refuses to save if any target is missing). Attached or exported Project docs first through `cp.normalize_md(src, dst)` (CRLF, space-only blank lines, headings).
 
@@ -136,6 +137,19 @@ Claude hands over the changed files, Pat commits them, then `python3 selfcheck.p
 - `hr_zone_time`: Share of valid HR seconds per zone.
 - `loop_length`: Length (m) of the first lap of a loop course: first return within `tol` m of the start after min_m metres (None if none).
 - `run_finish_report`: One-call summary for a trial / race run: km splits with HR, 500 m splits, halves, tail paces, HR zone shares, HR plateaus, loop length.
+
+### RUN ZONES
+- `run_1hz`: GPX / FIT run -> 1 Hz dict for HR-zone and threshold work: T (s), D (m; FIT: the recorded distance field, GPX: positions), V (m/s, 30-s centred), H (bpm; NaN where not recorded or blanked by `bad` = [(from_min, to_min)] on the elapsed clock, e.g. frozen strap values), E, rec (recorded second), stop (inside a gap or a standstill of >= stop_s s), cont (s of continuous running since the start or the last stop: HR kinetics), n.
+- `run_hr_pace_windows`: Quasi-steady windows of one run (r = run_1hz() dict, or a path) for HR-zone and threshold work: every `step_s` a `win_s` window without stops whose 30-s speeds vary by at most `max_cv` (CV) and which ends at least `min_cont_s` into continuous running; HR = mean of its last `hr_last_s` s (HR lags 30-90 s).
+- `run_hr_pace_model`: HR (last minute of each window) = slope x speed (km/h) + one offset per run, fitted on {run_name: run_hr_pace_windows array} (runs in `exclude` left out, e.g. a hot day).
+- `friel_run_pace_edges`: Friel's run pace zones collapsed to 5 (Z5 = 5a-5c) for a threshold pace `tp` (s/km; Friel: the average pace of a solo 30-min time trial): slowest-first edges Z1|Z2|Z3|Z4|Z5 = 129%, 113.5%, 105.5%, 99.5% of tp (TrainingPeaks 'Quick guide').
+- `friel_run_hr_zones`: Friel's run HR zones (% of LTHR: Z1 <85, Z2 85-89, Z3 90-94, Z4 95-99, Z5a 100-102, Z5b 103-106, Z5c >106) in bpm.
+- `run_hr_zone_score`: How well 5 HR zones (upper edges, e.g. [150, 164, 173, 188]: Z1 < 150 ...; Pat's set from 17 Nov) reproduce the pace zone (slowest-first pace edges in s/km, e.g. friel_run_pace_edges(286) or Strava's auto zones [386, 333, 299, 280]) of each window (run_hr_pace_windows rows).
+- `run_hr_zone_optimise`: Grid search of the Z2/Z3, Z3/Z4 and Z4/Z5 run HR edges (Z1 edge fixed: hardly any windows slower than recovery pace) that maximise run_hr_zone_score's balanced accuracy; also the range of each edge over all sets within `tol` of the best (how well the data pin it down).
+- `vdot`: Daniels-Gilbert VDOT of a race performance.
+- `vdot_pace`: Pace (s/km) for a VDOT: the all-out pace for an effort of `minutes` (Daniels-Gilbert %VO2max-duration curve) or the pace at a fraction `frac` of VO2max (Daniels' threshold pace is about 0.88).
+- `riegel_time`: Riegel prediction t2 = t1 (d2/d1)^k.
+- `run_tt_report`: Hard continuous run (time trial, 5K race, Friel's 30-min test): distance, time, pace, VDOT, HR average, HR of the last `last_s` s (Friel's LTHR estimate when the effort is a solo 30-min TT; a 5K reads 1-2 bpm higher), HR at the 10-min mark, per-km pace and HR, HR drift (bpm/min, speed-adjusted, from the steady windows).
 
 ### TESTS
 - `top_windows`: Best `n` non-overlapping mean-power windows of `dur_s` seconds in p[lo:hi] (at least `sep_s` apart).
