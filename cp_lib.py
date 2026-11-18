@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""cp_lib.py (v1.13, 2026-11-17) - reusable helpers for the 'cycling | running' coaching project.
+"""cp_lib.py (v1.14, 2026-11-17) - reusable helpers for the 'cycling | running' coaching project.
 
 Companion to analysis_tools.py (activity files -> reports / digest) and routes_tool.py (GPX route geometry).
 This module collects everything else that was written ad hoc during the chats:
@@ -749,12 +749,29 @@ def segment_lags(ref, other, seg_s=600, max_lag=240, min_r=0.6, min_sd=8.0, show
     return out
 
 
-def erg_blocks(ref, other, lag_s=0, hold_w=2.0, min_s=120, edge_s=15):
+def _local_lag(P, t0, Q, u0, a, b, lag0=0, max_lag=150, pad=60):
+    """Lag (s, meter_offset convention: other second k matches ref second u0 + k + lag - t0) that best aligns other[a:b] with the ref,
+    searched within lag0 +- max_lag on the stretch padded by `pad` s on both sides, so that the transitions into and out of a steady
+    block carry the alignment. Returns (lag, r)."""
+    a0, b0 = max(0, a - pad), min(len(Q), b + pad); q = Q[a0:b0]; best = (-2.0, lag0)
+    for lag in range(lag0 - max_lag, lag0 + max_lag + 1):
+        s0 = u0 + a0 + lag - t0
+        if s0 < 0 or s0 + len(q) > len(P): continue
+        p = P[s0:s0 + len(q)]; m = np.isfinite(p) & np.isfinite(q)
+        if m.sum() < 60: continue
+        r = np.corrcoef(p[m], q[m])[0, 1]
+        if np.isfinite(r) and r > best[0]: best = (float(r), lag)
+    return best[1], best[0]
+
+
+def erg_blocks(ref, other, lag_s=0, hold_w=2.0, min_s=120, edge_s=15, local=True, max_lag=150):
     """Stretches where `other` holds a constant power (ERG target: every second within +-hold_w W of the stretch median for at least
     min_s s), with the average of both meters over the same seconds (first and last edge_s s left out). These block averages are the
-    clean meter comparison when ERG is used: binning by one meter biases the meter_offset band table next to an ERG target. They
-    hardly depend on the alignment (constant power on one side), which also makes them robust to MyWhoosh timer freezes.
-    14 Nov: 15 min at 120 W KICKR = 114.5-115.0 W Stages (+4.7%). Returns a list of dict(start_min, length_s, other_w, ref_w, diff, ratio)."""
+    clean meter comparison when ERG is used: binning by one meter biases the meter_offset band table next to an ERG target.
+    local=True (v1.14): each block is aligned on its own (`_local_lag`, transitions in and out of the block within lag_s +- max_lag),
+    because with MyWhoosh timer freezes one ride-wide lag can be off by a minute or more: 17 Nov, lag +1 s ride-wide, about -72 s in
+    the first 40 min: the 10-min 150 W block read Stages 139.6 W (contaminated by the recovery) instead of 146.6 W. 14 Nov: 15 min at
+    120 W KICKR = 114.5-115.0 W Stages (+4.7%). Returns a list of dict(start_min, length_s, other_w, ref_w, diff, ratio, lag_s, r)."""
     t0, P = _grid(ref); u0, Q = _grid(other); out = []; i = 0; n = len(Q)
     while i < n:
         if not np.isfinite(Q[i]) or Q[i] <= 0: i += 1; continue
@@ -762,12 +779,13 @@ def erg_blocks(ref, other, lag_s=0, hold_w=2.0, min_s=120, edge_s=15):
         while j + 1 < n and np.isfinite(Q[j + 1]) and max(hi, Q[j + 1]) - min(lo, Q[j + 1]) <= 2 * hold_w:
             j += 1; lo = min(lo, Q[j]); hi = max(hi, Q[j])
         if j - i + 1 >= min_s:
-            a, b = i + edge_s, j + 1 - edge_s; s0 = u0 + a + lag_s - t0
+            lag, r = _local_lag(P, t0, Q, u0, i, j + 1, lag_s, max_lag) if local else (lag_s, np.nan)
+            a, b = i + edge_s, j + 1 - edge_s; s0 = u0 + a + lag - t0
             if s0 >= 0 and s0 + (b - a) <= len(P):
                 p = P[s0:s0 + b - a]; q = Q[a:b]; m = np.isfinite(p) & np.isfinite(q)
                 if m.sum() > 30:
                     ow, rw = float(q[m].mean()), float(p[m].mean())
-                    out.append(dict(start_min=i / 60, length_s=int(j - i + 1), other_w=ow, ref_w=rw, diff=ow - rw, ratio=ow / rw if rw > 0 else np.nan))
+                    out.append(dict(start_min=i / 60, length_s=int(j - i + 1), other_w=ow, ref_w=rw, diff=ow - rw, ratio=ow / rw if rw > 0 else np.nan, lag_s=int(lag), r=r))
         i = j + 1
     return out
 
@@ -826,8 +844,8 @@ def meter_offset(ref, other, max_lag=180, steady_sd=15.0, bands=(60, 100, 120, 1
     if show:
         print("lag %+d s (%s r %.3f), %d samples, overall ratio %.3f, steady fit other = %.3f x ref %+.1f W" % (lag, which, cs.max(), res["n"], res["ratio"], fit[0], fit[1]))
         for b in rows: print("  ref %3d-%3d W  n %3d  other %.1f  ref %.1f  diff %+.1f W  ratio %.3f" % b)
-        for e in res["erg"]: print("  ERG hold from other min %.1f, %.1f min: other %.1f W, ref %.1f W, diff %+.1f W, ratio %.3f" % (
-            e["start_min"], e["length_s"] / 60, e["other_w"], e["ref_w"], e["diff"], e["ratio"]))
+        for e in res["erg"]: print("  ERG hold from other min %.1f, %.1f min: other %.1f W, ref %.1f W, diff %+.1f W, ratio %.3f (lag %+d s)" % (
+            e["start_min"], e["length_s"] / 60, e["other_w"], e["ref_w"], e["diff"], e["ratio"], e["lag_s"]))
         for w in notes: print("  note:", w)
         for w in warn: print("  WARNING:", w)
     return res
@@ -951,47 +969,56 @@ def hour_test_report(path, other=None, dur=3600, block_s=300, lthr_last_s=1200, 
     return res
 
 
-def aerobic_check(path, targets=(130, 150), tol=10.0, min_s=(1200, 600), last_s=(600, 300), lag_s=180, other=None, show=True, align="power"):
+def aerobic_check(path, targets=(130, 150), tol=10.0, min_s=(1200, 600), last_s=(600, 300), lag_s=180, other=None, show=True, align="power", max_dev=4.0):
     """Aerobic check (progress check for goal a, every second week): 20 min at 130 W, then 10 min at 150 W, inside the Z2 part of a ride
-    (KICKR, fan, usual room). `path` = FIT path or a fit_series()/stream_series() dict. For each target, finds the longest stretch whose
-    30-s mean power stays within +-`tol` W of it; reports length, avg W, the HR of the last `last_s` seconds (the logged value), HR drift
-    (first vs last third after `lag_s` s of HR lag), W/HR and cadence. With `other` (a second recording of the same ride, e.g. the Edge
-    with the Stages) also the other meter's ratio on the same stretches (meter check; aligned by power since v1.6, see meter_offset).
-    11 Nov (old fan, "check 0"): 130 W 19.8 min, HR of the last 10 min 149.6; 150 W 9.8 min, HR of the last 5 min 160.9; Stages/KICKR 0.98-0.99.
-    Returns a list of dicts (one per target)."""
+    (KICKR, fan, usual room). `path` = FIT path or a fit_series()/stream_series() dict. For each target, the candidate stretches are those
+    whose 30-s mean power stays within +-`tol` W of it; since v1.14 the EARLIEST stretch of at least 75% of the planned length whose mean
+    is within +-max_dev W of the target is used (the check opens the session; on 17 Nov the longest stretch was the 124.5 W Z2 block
+    after the intervals, and the 160 W interval was taken for "150 W"); without one, the longest stretch as before. Reports length, avg W,
+    the HR of the last `last_s` seconds (the logged value), HR drift (first vs last third after `lag_s` s of HR lag), W/HR and cadence.
+    With `other` (a second recording of the same ride, e.g. the Edge with the Stages) also the other meter on the same stretch and, since
+    v1.14, the other file's HR (the Edge's ANT+ HR is the reference); each stretch is aligned on its own (`_local_lag`, MyWhoosh timer
+    freezes). 11 Nov (old fan, "check 0"): 130 W 19.8 min, HR of the last 10 min 149.6; 150 W 9.8 min, HR of the last 5 min 160.9;
+    Stages/KICKR 0.98-0.99. 17 Nov (check #1, baseline): see coach_notes.md. Returns a list of dicts (one per target)."""
     s = fit_series(path) if isinstance(path, str) else path; t0, P, H, C = _series_1hz(s)
     r30 = np.convolve(P, np.ones(30) / 30, "same"); out = []
     o = None
     if other is not None:
         o = fit_series(other) if isinstance(other, str) else other
-        mo = meter_offset(s, o, show=False, align=align); to, Po, Ho, Co = _series_1hz(o)
+        mo = meter_offset(s, o, show=False, align=align, checks=False); to, Po, Ho, Co = _series_1hz(o)
     for k, tw in enumerate(targets):
-        ok = (np.abs(r30 - tw) <= tol) & (P > 0); best = (0, 0); i = 0
+        ok = (np.abs(r30 - tw) <= tol) & (P > 0); runs = []; i = 0
         while i < len(ok):
             if ok[i]:
                 j = i
                 while j < len(ok) and ok[j]: j += 1
-                if j - i > best[1] - best[0]: best = (i, j)
-                i = j
+                runs.append((i, j)); i = j
             else: i += 1
-        a, b = best; n = b - a; need = min_s[k] if k < len(min_s) else min_s[-1]; ls = last_s[k] if k < len(last_s) else last_s[-1]
+        need = min_s[k] if k < len(min_s) else min_s[-1]; ls = last_s[k] if k < len(last_s) else last_s[-1]
+        good = [(x, y) for x, y in runs if y - x >= 0.75 * need and abs(P[x:y].mean() - tw) <= max_dev]
+        best = good[0] if good else (max(runs, key=lambda q: q[1] - q[0]) if runs else (0, 0))
+        a, b = best; n = b - a
         if n < 0.75 * need:
             out.append(dict(target_w=tw, found=False, length_s=int(n), need_s=int(0.75 * need))); continue
         h = H[a:b]; tail = slice(max(a, b - ls), b); hh = H[a + min(lag_s, n // 3):b]; third = max(1, len(hh) // 3)
         res = dict(target_w=tw, found=True, start_min=a / 60, length_s=int(n), avg_w=float(P[a:b].mean()), w_last=float(P[tail].mean()),
                    hr_last=float(np.nanmean(H[tail])), hr_avg=float(np.nanmean(h)), hr_drift=float(np.nanmean(hh[-third:]) - np.nanmean(hh[:third])),
-                   cad=float(np.nanmean(C[a:b][C[a:b] > 0])) if (C[a:b] > 0).any() else np.nan, short=bool(n < 0.95 * need))
+                   cad=float(np.nanmean(C[a:b][C[a:b] > 0])) if (C[a:b] > 0).any() else np.nan, short=bool(n < 0.95 * need), near_target=bool(good))
         res["w_per_hr"] = res["w_last"] / res["hr_last"] if res["hr_last"] > 0 else np.nan
         if o is not None:
-            x = int(t0 + a - mo["lag_s"] - to); y = x + n
-            if 0 <= x and y <= len(Po): res["other_w"] = float(Po[x:y].mean()); res["other_ratio"] = res["other_w"] / res["avg_w"]
+            ao = int(a + t0 - mo["lag_s"] - to); lag, rr = _local_lag(P, t0, Po, to, max(0, ao), max(0, ao) + n, mo["lag_s"])
+            x = int(t0 + a - lag - to); y = x + n
+            if 0 <= x and y <= len(Po):
+                res["other_w"] = float(Po[x:y].mean()); res["other_ratio"] = res["other_w"] / res["avg_w"]; res["other_lag_s"] = lag
+                res["other_hr_last"] = float(np.nanmean(Ho[y - (tail.stop - tail.start):y])); res["other_hr_avg"] = float(np.nanmean(Ho[x:y]))
         out.append(res)
     if show:
         for r in out:
             if not r["found"]: print("%d W: no stretch of at least %d s found (longest %d s)" % (r["target_w"], r["need_s"], r["length_s"])); continue
-            print("%d W: from min %.1f, %.1f min, avg %.1f W, last part %.1f W at HR %.1f (W/HR %.3f), drift %+.1f bpm, cadence %.0f%s%s" % (
+            print("%d W: from min %.1f, %.1f min, avg %.1f W, last part %.1f W at HR %.1f (W/HR %.3f), drift %+.1f bpm, cadence %.0f%s%s%s" % (
                 r["target_w"], r["start_min"], r["length_s"] / 60, r["avg_w"], r["w_last"], r["hr_last"], r["w_per_hr"], r["hr_drift"], r["cad"],
-                " (shorter than planned)" if r["short"] else "", ", other meter %.1f W (ratio %.3f)" % (r["other_w"], r["other_ratio"]) if "other_w" in r else ""))
+                " (shorter than planned)" if r["short"] else "", "" if r["near_target"] else " (no stretch near the target: longest used)",
+                ", other meter %.1f W (ratio %.3f), other HR last part %.1f" % (r["other_w"], r["other_ratio"], r["other_hr_last"]) if "other_w" in r else ""))
     return out
 
 

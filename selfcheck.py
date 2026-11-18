@@ -301,6 +301,17 @@ def main():
         check("meter_offset: a synthetic 2-min timer freeze is flagged as piecewise offsets", any("piecewise" in w for w in mf["warn"]), str(mf["warn"]))
     guarded(meter_checks)
 
+    def check1_17_11():
+        g, k = find("tests/17_11_garmin.fit"), find("tests/17_11_kickr.fit")
+        if not (g and k): return skip("aerobic check #1 17 Nov", "tests/17_11_*.fit not in the repo (optional)")
+        a = cp.aerobic_check(k, other=g, show=False); e = cp.erg_blocks(cp.fit_series(g), cp.fit_series(k))
+        b150 = [x for x in e if abs(x["other_w"] - 149.6) < 1]
+        check("aerobic check #1 17 Nov (v1.14): 130 W block from min 10 (not the later Z2 block), HR 135.1 / 146.4 (Edge), 150 W block Stages about 146.5 W (local alignment)",
+              abs(a[0]["start_min"] - 10.0) < 0.5 and abs(a[0]["other_hr_last"] - 135.1) < 0.4 and abs(a[1]["other_hr_last"] - 146.4) < 0.4 and abs(a[1]["avg_w"] - 149.6) < 0.5
+              and len(b150) == 1 and abs(b150[0]["ref_w"] - 146.5) < 0.6,
+              "start %.1f, HR %.1f / %.1f, 150 W block Stages %s" % (a[0]["start_min"], a[0]["other_hr_last"], a[1]["other_hr_last"], [round(x["ref_w"], 1) for x in b150]))
+    guarded(check1_17_11)
+
     def wprime():
         f = find("tests/01_11.fit")
         if not f: return skip("W' tools", "tests/01_11.fit not in the repo (optional)")

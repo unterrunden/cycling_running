@@ -1,6 +1,6 @@
-# Plan weeks 1-4 (9 Nov - 6 Dec 2026), as of 15 Nov
+# Plan weeks 1-4 (9 Nov - 6 Dec 2026), as of 18 Nov
 
-Planning FTP 175 W (both scales). Easy riding: KICKR 120-130 W (cap 140), Stages 115-125 W (cap 135), 85-90 rpm. Steady state: week 2 158-164 W (90-94%), weeks 3-4 161-168 W (92-96%). Fan: level 3 for checks, intervals and tests; level 1 for easy rides. Week 1 is done except Sunday; week 2 is concrete; weeks 3-4 are a sketch, tweaked before each week starts. Run days are provisional (best-forecast weekday, guard windows in coach_notes.md section 7).
+Planning FTP 175 W (both scales). Stages zero offset: weekly indoors (first indoor ride of the week) and before every check, test and outdoor ride. Easy riding: KICKR 120-130 W (cap 140), Stages 115-125 W (cap 135), 85-90 rpm. Steady state: week 2 158-164 W (90-94%), weeks 3-4 161-168 W (92-96%). Fan: level 2 for checks and intervals (from 17 Nov), level 3 for tests of 10 min or more, level 1 for easy rides. Run HR zones from 17 Nov: Z1 <=149, Z2 150-163, Z3 164-172, Z4 173-187, Z5 >=188 (LTHR 181). Week 1 is done; week 2 is concrete; weeks 3-4 are a sketch, tweaked before each week starts. Run days are provisional (best-forecast weekday, guard windows in coach_notes.md section 7).
 
 | Week | Date | Session | Where | Duration | Targets | Checks | Status |
 |---|---|---|---|---|---|---|---|
@@ -10,11 +10,11 @@ Planning FTP 175 W (both scales). Easy riding: KICKR 120-130 W (cap 140), Stages
 | 1 | Thu 12.11. | 60-min FTP test | indoor, fan level 3 | 60 min test (plus warm-up) | result 175.1 W Stages / 175.4 W KICKR | hour test: FTP 175 W, LTHR 172-173 | done |
 | 1 | Fri 13.11. | Rest (badminton) | - | - | - | - | done |
 | 1 | Sat 14.11. | Z2 ride (+ unplanned 3-min push) | indoor, fan level 1 | 101.7 min | Stages 113.8 W steady; push 258.5 W | long-ride log: legs 9.5, hands and saddle slight | done |
-| 1 | Sun 15.11. | Trainer ride with 5-min and 1-min all-outs | indoor, fan level 3 for the efforts | 1:45-2:00 h | 5 min: start 240-245 W, then 245-250 W, decide at 3:00 (goal 250 W); 1 min all-out; Z2 KICKR 120-130 W (cap 140) | go/no-go in the warm-up; both FITs, RPE per effort | today |
+| 1 | Sun 15.11. | Trainer ride with 5-min and 1-min all-outs | indoor, fan 1 / 3 for the efforts / 2 | 60 min (cut short; planned 1:45-2:00 h) | 5 min 248.0 W, 1 min 334.0 W (Stages; KICKR 247.7 / 328) | both new bests; W' 18 kJ too low -> 20 kJ proposed | done |
 | 2 | Mon 16.11. | Rest | - | - | - | - | planned |
-| 2 | Tue 17.11. | Aerobic check #1 (baseline) + 1 x 15 min | indoor, fan level 3 from the start | 75-90 min | 10 min 100-120 W; 20 min 130 W; 10 min 150 W (ERG, 85-90 rpm); 5 min easy; 15 min 158-164 W (90-94%); Z2 KICKR 120-130 W (cap 140) | aerobic check #1; interval log; resting HR in the morning; room temperature | planned |
-| 2 | Wed 18.11. | Run, 6 laps U1 (7th optional) | outdoor (provisional: best forecast) | about 7.6 km, 46 min (8.9 km, 54 min with lap 7) | 6:00-6:10 /km | long-run check: legs at 24 h and 48 h; 7th-lap rule | planned |
-| 2 | Thu 19.11. | 2 x 10 min steady state | indoor, fan level 1 -> 3 at the zero offset | 60-80 min | warm-up 10-15 min; 2 x 10 min 158-164 W, 5 min easy between; Z2 KICKR 120-130 W (cap 140) | interval log | planned |
+| 2 | Tue 17.11. | Aerobic check #1 (baseline) + 1 x 15 min + 30-s all-out | indoor, fan 1 (warm-up, 130 W) / 2 (150 W, interval) | 90 min | check 130 / 150 W (KICKR): HR 135.1 / 146.4; 15 min 159.4 W; 30 s 414 W | aerobic check #1 = baseline; interval log | done |
+| 2 | Wed 18.11. | 2 x 10 min steady state (swapped with the run) | indoor, fan 1 -> 2 after the warm-up | 60-80 min | warm-up 10-15 min; 2 x 10 min 158-164 W (start at 158-160), 5 min easy between; Z2 KICKR 120-130 W (cap 140) | interval log; heavy legs in the warm-up -> Z2 only | planned (confirmed 18 Nov) |
+| 2 | Thu 19.11. | Run, 6 laps U1 (7th optional) | outdoor (provisional: best forecast) | about 7.6 km, 46 min (8.9 km, 54 min with lap 7) | 6:00-6:10 /km; HR about 150-163 (run Z2) | long-run check: legs at 24 h and 48 h; 7th-lap rule | planned (provisional) |
 | 2 | Fri 20.11. | Rest (badminton fine) | - | - | - | - | planned |
 | 2 | Sat 21.11. | Z2 ride | outdoor (C15 / C11 / C14) | 50-60 km, 2:00-2:20 h | Stages 115-125 W (cap 135), 85-90 rpm; malto 30-40 g/h | long-ride log | planned |
 | 2 | Sun 22.11. | Long ride: 100 km rehearsal | outdoor (C17 + a few km); start by 12:00 | 75-85 km, 3:00-3:15 h | Stages 115-125 W (cap 135) evenly; 40-60 g carbohydrate/h; bib shorts; lights | long-ride log (comfort 0-10, food and drink, RPE); fallback 2:15-2:30 h on the KICKR | planned |
@@ -33,7 +33,7 @@ Planning FTP 175 W (both scales). Easy riding: KICKR 120-130 W (cap 140), Stages
 | 4 | Sat 05.12. | 20-min test + Z2 | indoor, fan level 3 (or outdoor: open) | 75-90 min | 30 min warm-up with 3 x 1 min at about 185 W; 3 min 175-180 W, then 182-187 W, last 5 min all-out; Z2 after | test: go/no-go, both FITs, RPE at 5/10/15/20 min | sketch |
 | 4 | Sun 06.12. | Long trainer ride | indoor | 2:00-2:30 h | KICKR 120-130 W (cap 140) | long-ride log (Edge FIT) | sketch |
 
-## Week 1 (about 6 h of riding (with Sunday) + 30 min run)
+## Week 1 (about 5.3 h of riding + 30 min run)
 
 **Mon 09.11. Rest** (done)
 
@@ -75,14 +75,14 @@ Planning FTP 175 W (both scales). Easy riding: KICKR 120-130 W (cap 140), Stages
 - Feel: RPE 3.
 - Checks: long-ride log: legs 9.5, hands and saddle slight.
 
-**Sun 15.11. Trainer ride with 5-min and 1-min all-outs** (today)
+**Sun 15.11. Trainer ride with 5-min and 1-min all-outs** (done)
 
-- Goal: Fresh 5-min and 1-min marks; meter check at 230-300+ W.
-- Where / duration: indoor, fan level 3 for the efforts; 1:45-2:00 h.
-- Targets: 5 min: start 240-245 W, then 245-250 W, decide at 3:00 (goal 250 W); 1 min all-out; Z2 KICKR 120-130 W (cap 140).
-- Feel: efforts all-out (RPE 9-10), the rest easy.
-- Checks: go/no-go in the warm-up; both FITs, RPE per effort.
-- Notes: Go/no-go in the warm-up: legs normal and HR at 120 W not clearly above Saturday's (about 130-136 bpm), otherwise Z2 only. Warm-up 20 min with 2-3 openers of 20-30 s at 200-250 W; 5 min all-out (no ERG; resistance mode as on the hour test); 8 min easy; 1 min all-out (start hard and hold: on 1 Nov the first 10 s were too cautious); 15 min easy; 50-65 min Z2; cool-down optional. No app switching during the efforts. Send both FITs, RPE per effort, a pacing note.
+- Goal: Fresh 5-min and 1-min marks; meter check at 230-330 W.
+- Where / duration: indoor, fan 1 / 3 for the efforts / 2; 60 min (cut short; planned 1:45-2:00 h).
+- Targets: 5 min 248.0 W, 1 min 334.0 W (Stages; KICKR 247.7 / 328).
+- Feel: RPE 9.5 / about 9.5.
+- Checks: both new bests; W' 18 kJ too low -> 20 kJ proposed.
+- Notes: Resistance mode for the efforts (no ERG). 5 min: hard first 15 s, dips at 0:30-0:45 and 1:45-2:30, strong last minute (negative split, a little left). 1 min: 340, 319, 321, 334, 346, 340 W per 10 s. Cut to 60 min with tired (not sore) legs and HR about 141 at 90-115 W afterwards: the usual elevation after maximal efforts. Analysis in coach_notes.md section 1.
 
 
 ## Week 2 (about 7.5-8 h of riding + 46-54 min run)
@@ -95,32 +95,32 @@ Planning FTP 175 W (both scales). Easy riding: KICKR 120-130 W (cap 140), Stages
 - Feel: -.
 - Notes: No school (compensation day) and therefore no school sports [Pat]. A strength/mobility session is possible here if Pat adopts the home routine (side plan, not required).
 
-**Tue 17.11. Aerobic check #1 (baseline) + 1 x 15 min** (planned)
+**Tue 17.11. Aerobic check #1 (baseline) + 1 x 15 min + 30-s all-out** (done)
 
 - Goal: Indoor aerobic baseline (goal a); first steady-state interval (goal c).
-- Where / duration: indoor, fan level 3 from the start; 75-90 min.
-- Targets: 10 min 100-120 W; 20 min 130 W; 10 min 150 W (ERG, 85-90 rpm); 5 min easy; 15 min 158-164 W (90-94%); Z2 KICKR 120-130 W (cap 140).
-- Feel: check blocks easy-steady (RPE 3-4); the 15 min comfortably hard (RPE 6-7).
-- Checks: aerobic check #1; interval log; resting HR in the morning; room temperature.
-- Notes: Fan level 3, window and door closed, room temperature at the start; wet the strap; resting HR on waking. The aerobic-check blocks in ERG at KICKR 130 W (20 min) and 150 W (10 min), seated, 85-90 rpm, no surges. Log the HR of the last 10 min at 130 W (the main number) and of the last 5 min at 150 W. The 15 min: start at 158-160 W and stay there unless it feels clearly easy; stop rule: power more than 5% below target for over a minute, or RPE above 8 before minute 10. Log average W, cadence, RPE at the end and how many more minutes he could have held it. Send both FITs (MyWhoosh and Edge).
+- Where / duration: indoor, fan 1 (warm-up, 130 W) / 2 (150 W, interval); 90 min.
+- Targets: check 130 / 150 W (KICKR): HR 135.1 / 146.4; 15 min 159.4 W; 30 s 414 W.
+- Feel: RPE 5 (check), 6 (interval).
+- Checks: aerobic check #1 = baseline; interval log.
+- Notes: Fan level 1 for the warm-up and the 130 W block, level 2 for the 150 W block and the interval = the standard for later checks. Check: HR of the last 10 min at 130 W 135.1, of the last 5 min at 150 W 146.4 (Edge HR); cadence 81-83 (aim 85-90). Interval 159.4 W, HR to 157, decoupling +1.6%, could have held it much longer. 30-s all-out 414 W after 89 min (95% of the indoor best). Analysis in coach_notes.md section 1.
 
-**Wed 18.11. Run, 6 laps U1 (7th optional)** (planned)
+**Wed 18.11. 2 x 10 min steady state (swapped with the run)** (planned (confirmed 18 Nov))
+
+- Goal: Steady-state work (goal c).
+- Where / duration: indoor, fan 1 -> 2 after the warm-up; 60-80 min.
+- Targets: warm-up 10-15 min; 2 x 10 min 158-164 W (start at 158-160), 5 min easy between; Z2 KICKR 120-130 W (cap 140).
+- Feel: intervals RPE 6-7, the rest easy.
+- Checks: interval log; heavy legs in the warm-up -> Z2 only.
+- Notes: Swapped with the run [17 Nov evening forecast: Wed rain at 12 and 15 h, more wind; Thu sunny at 15 h, light wind]; confirmed by Pat on 18 Nov. The day after Tuesday's check and interval: start at the bottom of the range; if the legs feel heavy in the warm-up, ride Z2 only. Fan level 1 for the warm-up, level 2 from a short stop after it (a Stages zero offset only if the weekly one is due). Log per interval: average W, cadence, RPE at the end, how many more minutes possible.
+
+**Thu 19.11. Run, 6 laps U1 (7th optional)** (planned (provisional))
 
 - Goal: Long-run build (+1 lap).
 - Where / duration: outdoor (provisional: best forecast); about 7.6 km, 46 min (8.9 km, 54 min with lap 7).
-- Targets: 6:00-6:10 /km.
+- Targets: 6:00-6:10 /km; HR about 150-163 (run Z2).
 - Feel: conversational, RPE 3-4.
 - Checks: long-run check: legs at 24 h and 48 h; 7th-lap rule.
-- Notes: Provisional (wetter.net 15 Nov: 13 C at 15:00, 10% rain, light wind; Thu equally warm but wet). Pat confirms 1-2 days ahead. Laps 2-5 at about 6:00/km are the comparable part. 7th lap only if at the end of lap 6 nothing is above 1/10, the pace held without effort, no stitches or headache, and the 48 h check after the last run was clean. Phone charged, strap wet and checked before the start. Legs 0-10 next morning and at 48 h (calves, shins, knees, Achilles, thighs).
-
-**Thu 19.11. 2 x 10 min steady state** (planned)
-
-- Goal: Steady-state work (goal c).
-- Where / duration: indoor, fan level 1 -> 3 at the zero offset; 60-80 min.
-- Targets: warm-up 10-15 min; 2 x 10 min 158-164 W, 5 min easy between; Z2 KICKR 120-130 W (cap 140).
-- Feel: intervals RPE 6-7, the rest easy.
-- Checks: interval log.
-- Notes: Warm up at fan level 1, stop for the Stages zero offset at about 8-10 min and switch the fan to level 3 for the rest of the ride. Intervals in ERG are fine. Start at the bottom of the range. Same stop rule and log as Tuesday. If school sports happen this day (open), the ride still fits (school sports are light).
+- Notes: Run day [Pat 18 Nov], in a period without significant rain (wetter.net 18 Nov: 13 / 8 C, 12.7 mm over the day, gusts 42 km/h SW). Plan C: Thu rest and the run on Fri 20 (forecast wetter: 24.9 mm, 10 C), so only if Thursday turns wet at run time. Laps 2-5 at about 6:00/km are the comparable part; expected HR about 150-163 (run Z2 since 17 Nov). 7th lap only if at the end of lap 6 nothing is above 1/10, the pace held without effort, no stitches or headache. Phone charged, strap wet and checked. Legs 0-10 next morning and at 48 h. School sports on Thursday (if any) are light.
 
 **Fri 20.11. Rest (badminton fine)** (planned)
 
@@ -133,7 +133,7 @@ Planning FTP 175 W (both scales). Easy riding: KICKR 120-130 W (cap 140), Stages
 - Targets: Stages 115-125 W (cap 135), 85-90 rpm; malto 30-40 g/h.
 - Feel: easy, RPE 3.
 - Checks: long-ride log.
-- Notes: Forecast (15 Nov): 8 C, cloudy, dry, S gusts about 36 km/h: outdoor OK. With a south wind the long NW/NNW legs of C14 / C11 come home with a tailwind. Sunset 16:39. Malto from the first 30 min.
+- Notes: Forecast (18 Nov): dry, 8 / 0 C, 7 h sun, gusts 25 km/h W: outdoor OK; cold start, so gloves and layers. With a south wind the long NW/NNW legs of C14 / C11 come home with a tailwind. Sunset 16:39. Malto from the first 30 min.
 
 **Sun 22.11. Long ride: 100 km rehearsal** (planned)
 
@@ -142,7 +142,7 @@ Planning FTP 175 W (both scales). Easy riding: KICKR 120-130 W (cap 140), Stages
 - Targets: Stages 115-125 W (cap 135) evenly; 40-60 g carbohydrate/h; bib shorts; lights.
 - Feel: easy all the way, RPE 3-4; no end surges.
 - Checks: long-ride log (comfort 0-10, food and drink, RPE); fallback 2:15-2:30 h on the KICKR.
-- Notes: Not yet in the forecast (check Thu/Fri). Dress rehearsal for 29 Nov: bib shorts, the planned food (malto plus a banana or bars), a refill plan (powder bag, petrol station or bakery), front and rear lights. Sunset 16:38: start by 12:00. Ride evenly; note comfort 0-10 (legs, back and neck, hands, saddle), food and drink, RPE. Indoor fallback 2:15-2:30 h Z2 if the weather turns.
+- Notes: Forecast (18 Nov): dry, 6 / -1 C, cloudy, gusts 19 km/h E (check Thu/Fri): frost overnight, so check for icy patches and wet leaves before starting; layers, gloves, overshoes if available. Dress rehearsal for 29 Nov: bib shorts, the planned food (malto plus a banana or bars), a refill plan (powder bag, petrol station or bakery), front and rear lights. Sunset 16:38: start by 12:00. Ride evenly; note comfort 0-10 (legs, back and neck, hands, saddle), food and drink, RPE. Indoor fallback 2:15-2:30 h Z2 if the weather turns.
 
 
 ## Week 3 (about 7.5-8 h of riding + 54 min run)

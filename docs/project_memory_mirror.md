@@ -1,4 +1,4 @@
-# Project memory mirror: Pat, cycling | running (17 Nov 2026)
+# Project memory mirror: Pat, cycling | running (18 Nov 2026)
 
 Fuller record of everything Pat has stated (facts, wishes, decisions), kept next to the compact Project memory files (topics/cycling.md, running.md, schedule.md, preferences.md). It began as a fallback when memory writes were blocked; since about 7 Nov the memory saves again, and [Pat 11 Nov] this file stays as the detailed, dated record (Markdown holds more than the memory files). Only Pat's statements go here; analyses belong in coach_notes.md.
 
@@ -102,6 +102,17 @@ aliases: [cycling training, power meter, FTP, 4DP, indoor trainer]
 - 15 Nov ride: stopped after the hour: legs tired and fatigued from the efforts (like the rest of the body, HR well above Saturday's in the easy riding afterwards), but not hurting, nothing aching or feeling off; later only minimally heavier than normal
 - 15 Nov fuelling: about 500 ml (one plastic bottle) with about 30 g carbohydrate, a solid meal soon after; generally drinks/fuels less when an effort is not long or all-out and a meal follows shortly; will increase intake for the longer outdoor rides ahead of the century
 - 17 Nov: the MyWhoosh timer freezes on 15 Nov were app switches; none happened during the efforts. Tue 17 Nov morning: resting HR fine, legs solid, so the aerobic check ride is on
+- 17 Nov ride (aerobic check #1 + 1 x 15): room 16 -> 19 C; legs solid overall but not optimal (nothing concerning, no effect on the session); RPE 5 after the check (very doable, comfortable), RPE 6 after the 15-min interval (comfortable, not exhausting, barely any sweat); could have held the 15 min a good while, an hour should not have been much of an issue; slight fatigue setting in later (higher HR in the Z2 riding near the end), not close to exhaustion
+- 17 Nov fan: level 1 for the warm-up, level 2 for the 150 W block and the 15-min interval; finds level 2 sufficient for this type of effort and usable for future checks
+- 17 Nov: tried an all-out 30 s at the end (had done 20 s and 1 min before, never a dedicated 30 s); classes it as a failure: not fresh, and he could have invested a bit more (about a 9/10 effort)
+- 17 Nov: running threshold HR 181 confirmed as set in intervals.icu
+- 17 Nov: Strava subscription renewed for a year (until 16 Nov 2027, about 22:00 UTC), so the connector is available essentially indefinitely; use it as extensively as needed
+- 18 Nov: W' 20000 J set in intervals.icu; the Garmin copy of the 17 Nov ride deleted on Strava; there was a timer freeze a bit after the interval on 17 Nov (Edge ride exactly 90 min, the MyWhoosh file shorter)
+- 18 Nov fan: level 1 was used for the 130 W block on 17 Nov; level 1 is sufficient for that kind of zone 2 riding (also more realistic, as the wind outside will not always be that strong)
+- 18 Nov docs: keep the doc headers without the chat index; add it only for a couple of updates when a new chat is started
+- 18 Nov plan: likely rides today (Wed 18) and runs tomorrow (Thu 19), when there is a period without significant rain (temperature fine, but strong winds make it feel quite a bit colder); plan C: Thu as a rest day and Fri as the run day (or a ride day, but little time on Friday), followed by the longer outdoor easy rides on the weekend
+- 18 Nov: Claude mentions the Stages zero offset before nearly every ride; as the indoor conditions are quite similar and unchanging, doing it about once a week should be sufficient (open to disagreement)
+- 18 Nov: missed requesting the Strava export on Mon 16 Nov; follows Claude's call (request now or next Monday)
 - 12 Nov: times in the doc headers are not needed (Claude had written a wrong 23:00); leave times out unless they matter
 - 12 Nov: wants the same detailed breakdown (strengths and weaknesses within a test, what the numbers tell) for future tests; asked for a deep-dive into how intervals.icu (or generally) calculates W' and for a workable value to enter there after the FTP increase; asked whether the Garmin copy of the hour test can be removed from Strava (kept it until Claude had finished)
 - 12 Nov test recordings: neither file includes warm-up or cool-down, only the test part; he followed the warm-up procedure except 2 rather than 3 one-minute openers at about 200 W; did no cool-down (felt solid quickly); has never really done cool-downs after his most intense runs either; would prefer to leave cool-downs out after tests and benchmarks unless Claude wants to keep them
