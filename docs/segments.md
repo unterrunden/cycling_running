@@ -1,4 +1,4 @@
-# Segments: definitions and effort archive (status 22 Nov 2026: efforts to 22 Nov; W/kg at 56 kg)
+# Segments: definitions and effort archive (status 22 Nov 2026, chat 4: efforts to 22 Nov; W/kg at 56 kg)
 
 Strava segments Pat tracks, with every effort found in his ride files. Sources: Pat's Strava values (6, 8 and 22 Nov) for the segment data, PR and
 effort count; efforts rebuilt by `segments_tool.py` v1.5 from the Strava export of 22 Nov (strava_export_22_11.zip, 48 outdoor rides; virtual
@@ -309,9 +309,9 @@ rides and indoor Edge files are skipped). Rerun the tool on each new export. 35 
   only at Z2 pace, 133-135 W); all wind-dependent. The climbs (Mount Phantasialand, RM Phanta go, Flammgasse, Mühlenbach, the Fischenich and
   Metternich climbs) are the least wind-sensitive. Most ridden: Theodor-Heuss Downforce (19 efforts), Liblarer->Bleibtreu See (17), Ab auf den Müll!
   and Kierberger Sprint (13 each).
-- On the plan routes, in riding direction: C27 century (29 Nov): Nörvenich 5 km / 6 km TT (km 78.7 / 80.3), Erdbeer-Radweg (89.6),
-  Liblarer->Bleibtreu See (95.5), Theodor-Heuss Downforce (98.3), Kierberger Sprint (100.5); in reverse: Ortsschildsprint Brühl City, L33 ost,
-  Erp-Friesheim. C30 v2 (22 Nov): Kurfürsten Sprint (lang) km 0.6, No10 revers 2.3, Mount Phantasialand 7.4, RM Phanta go 8.1, Swister Turm
+- On the plan routes, in riding direction: C27 v2 century (29 Nov; 22 Nov late): Erp-Friesheim (km 65.0), L33 ost (70.4), Knallgas runter (89.2,
+  the Rösberg descent), Ortsschildsprint Brühl City (95.0); in reverse: Kierberger Sprint, Theodor-Heuss Downforce, Liblarer->Bleibtreu See,
+  Erdbeer-Radweg, the Nörvenich TTs (v1 had them the other way round). C30 v2 (22 Nov): Kurfürsten Sprint (lang) km 0.6, No10 revers 2.3, Mount Phantasialand 7.4, RM Phanta go 8.1, Swister Turm
   runter 12.8, the Nörvenich TTs 45.9 / 47.5, Erdbeer-Radweg 57.6, Sprint von A553 zur A61 64.8, Mur von Metternich / Metternich Climb 71.7,
   Knallgas runter 75.8, Ortsschildsprint Brühl City 81.5.
 - The steepest to-do climbs reach 13.5-13.8% (Stationsweg Kreuzberg, Venusberg "Die Mauer"); Rampe nach Hemmerich and Wand von Merten probably

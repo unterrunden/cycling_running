@@ -1,4 +1,4 @@
-# Project memory mirror: Pat, cycling | running (22 Nov 2026)
+# Project memory mirror: Pat, cycling | running (22 Nov 2026, chat 4)
 
 Fuller record of everything Pat has stated (facts, wishes, decisions), kept next to the compact Project memory files (topics/cycling.md, running.md, schedule.md, preferences.md). It began as a fallback when memory writes were blocked; since about 7 Nov the memory saves again, and [Pat 11 Nov] this file stays as the detailed, dated record (Markdown holds more than the memory files). Only Pat's statements go here; analyses belong in coach_notes.md.
 
@@ -70,7 +70,8 @@ aliases: [cycling training, power meter, FTP, 4DP, indoor trainer]
 
 ### Trainer, MyWhoosh and recording
 - Wahoo KICKR Core 2 set up and working with MyWhoosh on the iPad: first virtual ride Tue 3 Nov (easy, late evening), a more intense short session Wed 4 Nov morning when school started later; records via the iPad with KICKR power plus the HR strap; the Garmin is not used indoors so far, but he can record with both and compare
-- MyWhoosh resistance mode is 'dynamic' (the default; resistance follows the gradient), which is irrelevant on the 0 m test course
+- MyWhoosh resistance mode is 'dynamic' (the default; resistance follows the gradient, scaled by the 'gradient feel' setting)
+- 22 Nov (23:53): the flat-course requirement can be discarded entirely: he likes some elevation in the courses (even with gradient feel at 0%), as a fully flat course slightly distorts the distance figures upwards
 - The trainer cassette differs from the bike's (and maybe more), so the lowest gears are not enough for steep climbs (cadence below 60); he will try other gear ratios and is considering a separate cassette for the trainer that matches the bike
 - 7 Nov: the 0.13 km Garmin duplicate of 6 Nov is deleted on Garmin and Strava; the Edge records indoor rides with an indoor profile from now on; only moving time matters
 - Stages zero offset last done near the start of the 1 Nov 4DP (outdoors), so some drift is possible; he will calibrate after the warm-up from now on
@@ -102,6 +103,7 @@ aliases: [cycling training, power meter, FTP, 4DP, indoor trainer]
 - Clothing: indoors so far a simple sports shirt and shorts, no cycling jersey or bib shorts; on 8 Nov he rode without a shirt and it felt somewhat to noticeably more comfortable (an easier ride, though); outdoors similar shirts and the same shorts, plus a cycling jacket with back pockets when colder (his only cycling-specific wear used so far); owns one pair of bib shorts (a gift) and recently got full-length bib tights (also a gift), both unused so far; saddle discomfort has been minimal to moderate (no very long rides yet); plans to buy 2-3 more shorts and a couple of jerseys at Decathlon
 - Nutrition on the bike: a 3 kg bucket of Lamperts maltodextrin DE 12 (about 2.8 kg left); never used bars or food on rides, open to it but prefers maltodextrin in his water; two bottles and two cages: about 700 ml steel (or similar, not plastic) and about 500 ml plastic (malto in the plastic one leaves an unpleasant aftertaste); plans to buy two coated plastic bottles; he will report when he gets the items
 - 22 Nov, clothing on the long ride: the long bib shorts as the first layer for the first time, the same joggers on top, a long-sleeve shirt and the cycling jacket
+- 22 Nov (23:53), bottles: hopefully two 710 ml CamelBak bottles by Sunday (Black Friday sale), likely a 620 ml one as well; with them nearly 1.5 l before a refill; he needs only about 2 l while riding, so an early refill is enough once he has drunk 500 ml or slightly more
 - 22 Nov (22:08), pre-ride fuelling is quite significant for him: about 150 g of carbohydrate in total on weekend mornings before rides, roughly 100-125 g on weekdays after he gets home from school; when he starts riding changes how much of it is still stored, but mainly at the beginning a lot of fuelling right off the bat might not be necessary, which also reduces the total fuelling needs; wants this as a notice for long-ride fuelling guidance (not needed for short rides); the long rides are mainly zone 2 and partly zone 3, not any sort of race; understands the point about more fuel on longer rides and strives to incorporate it step by step, maybe a bit slower than Claude would like
 
 ## Tests and benchmarks
@@ -123,7 +125,7 @@ aliases: [cycling training, power meter, FTP, 4DP, indoor trainer]
 
 ### Hour test (Thu 12 Nov)
 - 60-min FTP test: not done on Sun 8 Nov (too late, no fan); most likely Mon 9 Nov indoors with the fan, making Tue 10 Nov a rest day; considered an outdoor test on a new route 'ftp' (start of the test at km 12.8 when leaving Lechenich, about 23.3 km before being back at Lechenich, little elevation, solid roads, roughly a loop so the wind cancels out); an outdoor test would likely mean a Sunday because of daylight and traffic
-- Plans to do the 60-min trainer test on a completely flat course (0 m elevation); asked why not ERG mode
+- Asked why not ERG mode for the 60-min trainer test (the earlier wish for a fully flat 0 m course is superseded by the 22 Nov course preference, see Trainer, MyWhoosh and recording)
 - Thu 12 Nov, 60-min FTP test on the trainer ("we did it", a rollercoaster but a good learning experience): really felt he would not be able to finish at target power; planned 180 W initially but realised that was unrealistic (also given the resulting W/kg, which are higher than earlier anticipated), so held on to about 175 W, which worked out; was "stuck" at 174 W for a while and pushed more in the last 6-7 minutes; could not have squeezed out much more (maybe at most 5 W "riding against death"); pacing was good in his view; recovered quite well afterwards, no real pain a couple of minutes after (a paced effort, never truly all out except the final minutes, and the test relies on the legs more than on the cardiovascular system, unlike running virtually any longer distance); only lasting pain, very slight and not concerning, mainly when sitting: near the buttocks and upper thighs (he will report if it remains, expects it to be short-lived)
 - 12 Nov test: RPE 7 / 8 / 9 at 20 / 40 / 60 min (also in the KICKR ride's Strava description), as the test is not truly all out before the last minutes and depends highly on pacing; overall feeling 9.5/10, very solid, nothing physical or psychological kept him from performing (there will always be days when he is a smidge better)
 - 12 Nov test setup: fan level 3, as it is a highly intense benchmark, no regrets; suggests level 3 for all benchmarks from now on unless they are shorter than 10 min (then sweating hardly matters); it felt worlds better than the old fan, sweat did not hold him back at all (only wiped his face a couple of times, no dripping); room exactly about 15 C at the start, just above 19 C at the end; window and door closed the entire time; zero offset about 10 min into the session, reading 886; the 0 m elevation course could not be selected (its region is restricted to certain weekdays), so he chose a course with 7 m of elevation per lap in Saudi Arabia with "gradient feel" set to 0%, so he did not feel the elevation on the trainer and only got slower virtually while keeping the same gearing and pacing; never changed gear: virtual gearing on gear 16 with the fine-tune setting (how fine each gear step is) at 10%, big chainring, 3rd or 4th easiest (biggest) sprocket
@@ -267,6 +269,7 @@ aliases: [cycling training, power meter, FTP, 4DP, indoor trainer]
 ### Long rides and the 100 km
 - 100 km on Sun 29 Nov is fine; all weekends are possible but Sunday is preferred over Saturday; the final 4DP ideally on a Sunday, Sun 20 Dec looks like a good fit, possibly outdoors if the weather allows for direct comparability; tests indoors from then on
 - First 100 km route: komoot "century" (tour 3379567079), his current plan for the first 100 km ride; he may adjust it slightly
+- 22 Nov (23:53): revised century route (file attached; also meant for the repo's routes zip): the waypoints reversed, now home via the Rösberg descent, so the refill comes a good chunk earlier, in Düren; if Claude does not agree with the refill logic, the route can be tweaked again
 
 ### Week 2 changes (18-21 Nov)
 - 18 Nov plan: likely rides today (Wed 18) and runs tomorrow (Thu 19), when there is a period without significant rain (temperature fine, but strong winds make it feel quite a bit colder); plan C: Thu as a rest day and Fri as the run day (or a ride day, but little time on Friday), followed by the longer outdoor easy rides on the weekend
@@ -276,6 +279,10 @@ aliases: [cycling training, power meter, FTP, 4DP, indoor trainer]
 - 20 Nov: agrees with the short easy ride today and with the weekend swap: the long ride (75-85 km) on Sat 21, the 50-60 km on Sun 22 (treat as given until they happen)
 - 21 Nov: the weekend swapped back: the outdoor ride on Sat 21 and the long ride on Sun 22, although the other order would have been better: getting the bike out of the trainer and fitting the rear wheel took a while, so 80+ km would not have fitted before dark; should be quicker in future
 - 22 Nov (22:08), daylight: the bike lights are fine for riding on for longer; riding an hour into the dark would not be sensible, but anything up to sunset and about 15-20 minutes after it (turning to dusk, not properly dark, lights on) is fine to work with; wants a bit more lenience on start and arrival times (fine if Claude tightens it slightly); 22 Nov felt entirely fine: technically slightly better to be home a bit earlier, and he could have gone harder at the end to arrive before 17:00, but took it easy with the slight pain emerging towards the end
+
+### Week 3 (23-29 Nov)
+- 22 Nov (23:53): the Tue 24 run is very likely (no school that day, so convenient); he confirms in the evening; treat it as given unless he updates
+- 22 Nov (23:53): Sat 28 likely outdoors, as a final reconnaissance ahead of the century; treat it as given unless he says otherwise before (slightly less certain than the Tuesday run, but still most likely)
 
 ### Side plan and toolkit
 - 15 Nov: considering light home strength and mobility training on the side (every couple of days or daily; beginner-friendly, household items, no gym, brief; to support weight gain and cycling); logged only lightly, not part of the main plan; asked for Claude's view and some exercises
@@ -307,6 +314,7 @@ aliases: [cycling training, power meter, FTP, 4DP, indoor trainer]
 - 21 Nov: the 20 Nov Garmin activity on Strava: he moved it to the indoor bike, but cannot change it to 'Virtual Ride' manually; changing it to something like 'Workout' would hide the wattages and power records
 - 21 Nov: the 10 Nov run FIT is attached now; nothing committed to GitHub yet (he commits after this update); asked whether the new tests/ folder should hold only the four new files, or whether Claude still wants the older and KICKR files there (both fine)
 - 22 Nov: will upload the commit shortly (after answering the questions); 22 Nov (12:06): the two rides are in the new routes zip (all_routes_22_11.zip); he updates GitHub once Claude has these aspects in
+- 22 Nov (23:53): the docs/ files were missing from the commit (his mishap) and are added now, together with the revised century route
 - 22 Nov (evening): the new Strava export attached (strava_export_22_11.zip); asked whether he should hand over all scripts from this chat again or whether Claude can traverse them itself (if so, add the new ones to the catalogue); Claude should look at analysis_tools.py and update it as well; this chat's finalisation with all the prior steps and file updates comes first, the GitHub commit (genuinely) after these steps; take all the time needed and ask for any input or missing info
 
 ### Chats and docs
@@ -443,3 +451,4 @@ aliases: [school breaks, school holidays]
 - Weekly commitments: school sports every Thursday (not intense) and every second Monday (had it on Mon 2 Nov; confirmed 16 Nov, 30 Nov, 14 Dec; sometimes cancelled, he will say); non-competitive badminton on Fridays is inconsistent (sometimes 2-3 weeks without) and usually does not happen during school breaks; it is never long or intense, so no session (mainly Saturday) needs toning down for it; he went on Fri 6 Nov; no other appointments for the plan period so far; he will tell me about new ones and any upcoming school-free days
 - 15 Nov: Mon 16 Nov no school (compensation day), so no school sports; unsure whether school sports happen in the coming week, he will say
 - 19 Nov: confirmed the every-second-Monday school-sports schedule (16 Nov, 30 Nov, 14 Dec); none on Mon 23 Nov (an earlier remark about 'next Monday' was a mix-up)
+- 22 Nov: no school on Tue 24 Nov

@@ -191,6 +191,9 @@ Pat asked on 22 Nov whether to hand over the chat-3 commands again (as the app e
 | `sandbox/mirror_restructure_21_11.py` (21 Nov) | ONE-OFF | the mirror regrouped into subcategories (line map, nesting, verified that no bullet was lost) |
 | `sandbox/route_model_22_11.py` (22 Nov) | PORTED | -> `routes_tool.route_time` / `calibrate_time` |
 
+## Chat 4 (from 22 Nov)
+- 22 Nov, century v2 (C27 v2) check, ad hoc (not ported; the pieces are library calls): `routes_tool.analyse` / `compare_routes` / `route_overlap` (v2 vs v1 and the routes zip), `route_time` in five winds, `shortcuts` with custom early/late windows, `segments_tool.on_route`, `analysis_tools.py --plan` (11:00 / 11:30 starts). Fuel stations: Nominatim (OSM) `search?amenity=fuel&bounded=1&viewbox=...&extratags=1` (opening hours in `extratags.opening_hours`) plus `reverse?lat=&lon=` for komoot waypoint spurs, then `routes_tool.near_places` (max 700 m). Nominatim works from the sandbox with a User-Agent (about 1 request/s); the Overpass API does not.
+
 ## Gotchas learned along the way (all handled in the library)
 - Weather from the sandbox (22 Nov): api.met.no's locationforecast (`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=..&lon=..`, needs a User-Agent header) works when Open-Meteo returns 429; hourly for about 2.5 days, then 6-hourly.
 - The komoot connector's GPX link (mcp.main.komoot.net) downloads from the shell, but the track is simplified and trimmed near home (C30: 82.9 vs 85.2 km); Pat's own export is the geometry source.
@@ -218,3 +221,4 @@ Pat asked on 22 Nov whether to hand over the chat-3 commands again (as the app e
 - Strava draws missing HR as a flat ("frozen") line: look for gaps in the file, not for constant values.
 - Open-Meteo: the archive API has a daily request limit for the sandbox's shared IP; the historical-forecast API (historical-forecast-api.open-meteo.com) gives the same hourly fields. Strava's export also carries weather columns (temperature, apparent temperature, humidity, wind in m/s) for many outdoor activities from mid-October.
 - Python's `%.0f` rounds half to even: 174.5 W prints as 174 in one place and 175 in another when the float is 174.4999 / 174.5001; the digest tables come from one function, so they agree with each other.
+- komoot GPX: a waypoint placed off the planned line becomes an out-and-back spur (a turn of about 170-180 degrees, 22 Nov C27 v2 km 24.2 and 78.7); scan the turn list for them. A re-export of an older tour can look like a new file (22 Nov: the zip's century.gpx = v1): compare geometry, not file names or bytes.
