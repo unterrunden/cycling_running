@@ -1,0 +1,41 @@
+date,id,loc,temp,apparent,rh,wind_kmh,gust_kmh,precip_mm,cloud,rad,hours,wx_src
+2026-09-01,19993326863,bruehl,20.1,20.7,66.0,3.6,10.1,0.0,40.0,36.0,1.0,open-meteo historical-forecast
+2026-09-02,20006795974,bruehl,21.8,20.6,47.0,7.8,22.3,0.0,96.0,299.0,3.0,open-meteo historical-forecast
+2026-09-03,20023039905,bruehl,21.2,22.4,82.0,11.4,22.9,0.0,96.0,76.0,3.0,open-meteo historical-forecast
+2026-09-05,20051436964,bruehl,18.2,16.8,57.0,9.3,19.6,0.0,98.0,28.0,2.0,open-meteo historical-forecast
+2026-09-06,20064558832,bruehl,23.9,21.8,35.0,9.6,20.5,0.0,73.0,236.0,4.0,open-meteo historical-forecast
+2026-09-08,20090462824,bruehl,26.7,25.3,41.0,15.2,36.1,0.0,33.0,298.0,3.0,open-meteo historical-forecast
+2026-09-09,20105982493,bruehl,16.5,14.9,69.0,12.2,29.7,0.0,48.0,72.0,2.0,open-meteo historical-forecast
+2026-09-10,20120588588,bruehl,18.6,16.8,42.0,4.1,9.2,0.0,0.0,69.0,3.0,open-meteo historical-forecast
+2026-09-12,20147601893,bruehl,21.1,20.8,57.0,6.0,15.4,0.0,100.0,83.0,3.0,open-meteo historical-forecast
+2026-09-13,20162171869,bruehl,17.8,19.1,93.0,6.7,16.0,0.1,56.0,23.0,3.0,open-meteo historical-forecast
+2026-09-15,20186168317,bruehl,28.6,30.0,47.0,5.2,15.1,0.0,2.0,472.0,2.0,open-meteo historical-forecast
+2026-09-16,20200914229,bruehl,18.7,18.3,68.0,8.3,22.1,0.0,11.0,371.0,2.0,open-meteo historical-forecast
+2026-09-17,20215727978,bruehl,19.7,17.6,48.0,11.2,24.1,0.0,90.0,103.0,2.0,open-meteo historical-forecast
+2026-09-19,20240306415,bruehl,22.9,20.9,39.0,10.3,26.4,0.0,98.0,406.0,4.0,open-meteo historical-forecast
+2026-09-20,20256580462,bruehl,17.3,16.6,84.0,13.9,31.7,0.0,100.0,112.0,3.0,open-meteo historical-forecast
+2026-09-22,20283121069,bruehl,19.7,18.4,47.0,5.2,15.8,0.0,0.0,311.0,2.0,open-meteo historical-forecast
+2026-09-23,20299767791,bruehl,20.9,19.9,44.0,3.4,6.7,0.0,35.0,87.0,3.0,open-meteo historical-forecast
+2026-09-24,20313673987,bruehl,17.3,14.9,44.0,8.1,15.7,0.0,98.0,113.0,3.0,open-meteo historical-forecast
+2026-09-25,20321108977,bruehl,16.3,14.5,48.0,4.0,12.8,0.0,21.0,451.0,2.0,open-meteo historical-forecast
+2026-09-26,20338757606,bruehl,22.4,21.2,46.0,9.0,16.6,0.0,61.0,140.0,1.0,open-meteo historical-forecast
+2026-09-27,20354977282,bruehl,26.8,26.3,36.0,4.2,13.3,0.0,69.0,261.0,4.0,open-meteo historical-forecast
+2026-09-29,20381671732,bruehl,24.8,23.0,34.0,8.2,16.4,0.0,50.0,18.0,2.0,open-meteo historical-forecast
+2026-09-30,20395498090,bruehl,28.0,28.2,42.0,7.3,17.1,0.0,100.0,106.0,2.0,open-meteo historical-forecast
+2026-10-02,20420830767,bruehl,19.7,19.3,59.0,6.2,14.4,0.0,100.0,274.0,2.0,open-meteo historical-forecast
+2026-10-03,20435631635,bruehl,21.1,20.5,52.0,5.8,11.5,0.0,86.0,190.0,1.0,open-meteo historical-forecast
+2026-10-08,20504829655,bruehl,13.0,10.5,74.0,14.4,27.6,0.5,0.0,48.0,2.0,open-meteo historical-forecast
+2026-10-12,20556119524,bibbona,20.0,17.1,61.0,25.2,43.9,0.0,0.0,20.0,1.0,open-meteo historical-forecast
+2026-10-14,20586886327,bibbona,16.5,16.5,80.0,7.3,11.2,0.0,0.0,0.0,1.0,open-meteo historical-forecast
+2026-10-16,20608916426,bruehl,23.7,23.4,53.0,10.1,22.1,0.0,2.0,316.0,2.0,open-meteo historical-forecast
+2026-10-17,20624225134,bruehl,11.1,9.9,83.0,5.0,12.2,0.0,9.0,4.0,1.0,open-meteo historical-forecast
+2026-10-18,20637469510,bruehl,11.4,9.9,78.0,6.1,15.8,0.0,100.0,6.0,1.0,open-meteo historical-forecast
+2026-10-23,20700381551,leutkirch,12.4,8.7,60.0,12.2,26.6,,,,1.0,Strava export weather (one observation)
+2026-10-26,20735555580,leutkirch,9.5,6.4,74.0,12.2,25.9,,,,1.0,Strava export weather (one observation)
+2026-10-28,20765270104,bruehl,14.1,12.5,69.0,8.3,20.9,0.0,0.0,378.0,1.0,open-meteo historical-forecast
+2026-10-30,20792360834,bruehl,13.6,12.2,68.0,5.2,13.9,0.0,2.0,274.0,3.0,open-meteo historical-forecast
+2026-10-31,20806574367,bruehl,11.2,9.2,70.0,7.1,14.3,0.0,94.0,169.0,4.0,open-meteo historical-forecast
+2026-11-01,20818987898,bruehl,10.6,9.1,75.0,3.3,9.3,0.0,100.0,108.0,4.0,open-meteo historical-forecast
+2026-11-10,20934398125,bruehl,8.1,5.2,67.0,7.9,15.5,0.0,99.0,112.0,1.0,open-meteo historical-forecast
+2026-11-21,21072998634,bruehl,8.6,8.9,,8.6,14.0,,,,,strava export 22 Nov (weather columns; Edge mean 8.3 C; wind from 260 deg)
+2026-11-22,21086224355,bruehl,4.3,4.2,,4.3,10.8,,,,,strava export 22 Nov (weather columns; Edge mean 2.8 C; wind from 90 deg)
