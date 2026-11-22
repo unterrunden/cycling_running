@@ -1,20 +1,32 @@
-# Routes and courses: Pat (cycling + running), status 12 Nov 2026
+# Routes and courses: Pat (cycling + running), status 22 Nov 2026
 
 Purpose: one place where Claude finds every route Pat uses, sorted by purpose, so a route can be picked for a session. New routes are analysed with `routes_tool.py` (GitHub repo) and added with the template at the end.
 
-Conventions:
+## Conventions
+
+### IDs and structure
 - IDs are stable: C = cycling, U = running, S = Strava saved routes. Removed so far: the old 4DP v1 loop (komoot 3316196558), C5 (unchecked komoot suggestions) and C12 (near-duplicate of C8).
+- Cycling routes are grouped by purpose (### category, #### route); running courses are listed directly (### course). Every entry: Type, Geometry, Wind, [Pat] notes, Good for, Status (template at the end).
+
+### Geometry and physics
 - Geometry is computed from the GPX: sharp turn = heading change of at least 55° within 100 m; ascent uses 60 m smoothing and a 2 m threshold, so komoot's own figures differ; "wind" names the effect of the two usual wind directions on the longest straight (reversed direction flips it).
+- Physics model mass [12 Nov]: rider 56 kg (Pat, measured; 60 kg before was never weighed) + bike 10.1 + kit about 2 = 68 kg (cp_lib v1.8); distances computed with 72 kg are about 0.5-1% short on the flat (20 min at 185 W: 9.87 -> 9.94 km calm, 11.93 -> 12.01 km tailwind, 8.02 -> 8.07 km headwind), more on climbs; not recomputed entry by entry.
+- Ride times [22 Nov]: `routes_tool.route_time` (physics per 20 m with grade and the wind component, at most 42 km/h, 4 s per sharp turn), times a calibration factor from real rides (21 Nov 1.043, 22 Nov 1.049; default 1.046); `analysis_tools.py --plan <gpx> --power <W> --start <hh:mm> --date <date> --wind <km/h> --wind-from <deg>` gives clock times every 10 km, sunset, climbs and shortcuts. Moving time only: add his real stops (21 Nov 18 min, 22 Nov 44 min).
+
+### Pat's checks, wind and daylight
 - [Pat] He checks every route himself before using it for efforts. Roads are assumed paved unless he says otherwise; surface, crossing and traffic-light notes are only recorded when he mentions them, komoot alerts only when he flags them.
 - Wind in the area: usually from the south, second most common from the west.
-- Physics model mass [12 Nov]: rider 56 kg (Pat, measured; 60 kg before was never weighed) + bike 10.1 + kit about 2 = 68 kg (cp_lib v1.8); distances computed with 72 kg are about 0.5-1% short on the flat (20 min at 185 W: 9.87 -> 9.94 km calm, 11.93 -> 12.01 km tailwind, 8.02 -> 8.07 km headwind), more on climbs; not recomputed entry by entry.
+- Daylight (Cologne, computed with `cp.sun_times`): sunset 17:02 on 5 Nov, 16:47 on 15 Nov, 16:39 on 21 Nov, 16:38 on 22 Nov, 16:32 on 29 Nov, 16:26 on 13 Dec (the earliest); civil dusk about 35-40 min later. Weekday outdoor sessions after about 16:00 need lights and quiet roads; steady efforts belong on the trainer.
+
+### Files
 - GPX formats [Pat, 7 Nov]: komoot's own export works only for routes inside his unlocked area (Rhein-Erft-Kreis); routes starting outside it are exported with a third-party tool, which writes route points (`<rtept>`, creator "komootGPXport") instead of track points. `routes_tool.py` reads both.
-- Daylight (Cologne, computed): sunset 17:02 on 5 Nov, 16:47 on 15 Nov, 16:32 on 29 Nov, 16:26 on 13 Dec (the earliest); civil dusk about 35-40 min later. Weekday outdoor sessions after about 16:00 need lights and quiet roads; steady efforts belong on the trainer.
+- [21 Nov] Recorded rides on roads not in the zip get an entry from the Strava GPX of the ride (the planned route file, if there is one, replaces it later).
+- [22 Nov] The komoot connector (route details plus a GPX link) works for Pat's tours by ID, but its GPX is simplified and trimmed (C30: 82.9 km with the start 1.1 km from home, vs 85.2 km in Pat's export; C29: 56.7 vs komoot's 58.7 km): good for distance, elevation and a first look, not for the geometry of an entry. Use Pat's own export.
 
 ## How to pick a route (selection guide)
 | Session | Routes | What the route must offer |
 |---|---|---|
-| Z2 endurance ride (60-75 km at weekends) | C10, C11, C14, C15, C17; shorter: C8, C9, C24; Strava S routes | Flat to rolling, few stops, climbs under about 5% |
+| Z2 endurance ride (60-90 km at weekends) | C10, C11, C14, C15, C17, C29 (ridden 21 Nov, many corners), C30 (86 km, ridden 22 Nov); shorter: C8, C9, C24; Strava S routes | Flat to rolling, few stops, climbs under about 5% |
 | First 100 km | C27 (century, Pat's plan); alternatives C25 (flatter), C16 (hillier) | Mostly flat, fuel and water stops, home before dusk |
 | Steady state 10-30 min | C28 (km 21.5-32.9 S stretch and the following legs), C21 / C22 (17.7-18 km straight), C1 south stretch (10.7 km), C2 (11.7 km), C23 (10.2 and 9.5 km legs), C19, C17 (21 km), C14 (15.7 km), C10 (12.6 km) | 10+ km with at most 1-2 gentle direction changes and no traffic lights; constant slope is a plus |
 | 60-min test outdoors | C28 from about km 17 (ends about km 47-48) | 30-31 km with few turns, wind roughly cancelling |
@@ -29,7 +41,7 @@ Conventions:
 
 ### Tests and steady state
 
-### C1: 4DP loop ("4dp v2", komoot tour 3373226373; version ridden on 1 Nov)
+#### C1: 4DP loop ("4dp v2", komoot tour 3373226373; version ridden on 1 Nov)
 - Type: loop from home, 55.1 km, +166/-168 m, steepest 500 m +5.2%, highest point 153 m; closes within 32 m. (The 31 Oct draft was 56.9 km; the 1 Nov version shortens the Kerpen section.)
 - Geometry (km: what; 28 sharp turns, 0.51/km):
   - 0-9.2: 4 corners at km 2.0-2.7, then 6.5 km WSW (240°): warm-up
@@ -49,47 +61,47 @@ Conventions:
 - Wind (south stretch, 172°): south wind = headwind, west wind = crosswind, north wind = tailwind. 20 min at 185 W covers about 9.9 km in calm air, about 8.0 km with a 10 km/h headwind and about 11.9 km with a 10 km/h tailwind (my model then: 72 kg, CdA 0.38, +0.4%). On 1 Nov: 10.0 km at 183 W in near-calm air (Strava weather NE 4 km/h).
 - Status: 4DP ridden Sun 1 Nov 2026 (results in coach_notes.md); the Sat 31 Oct mock ride used most of the loop. [Pat, 6 Nov] Final 4DP ideally Sun 20 Dec, outdoors on C1 if the weather allows (direct comparison), otherwise on the trainer; tests indoors after that.
 
-### C28: "ftp" v2 (komoot tour 3386583719, 8 Nov; route export via the third-party tool)
+#### C28: "ftp" v2 (komoot tour 3386583719, 8 Nov; route export via the third-party tool)
 - Type: loop from home, 62.5 km, +142/-144 m, steepest 500 m about +3.3% / -3.3%, 82-139 m; closes at home.
 - [Pat] Built from solid sections already ridden for an outdoor 60-min FTP test: start at about km 17, end anywhere before km 47 to about 50 depending on wind and form. (The first version of 8 Nov, 48.8 km, was too short: its loop from km 12.8 closed after 23.3 km.)
 - Geometry (29 sharp turns, 0.46/km): km 2.7-9.2 6.5 km WSW (240°); corner cluster km 9.9-13.2 (eight turns); 13.2-15.7 2.5 km NW; 15.9-20.3 4.4 km NW (317°); test part from km 17: four turns at km 20.3 (-105°), 20.8 (+90°), 20.9 (-58°), 21.5 (-76°); 21.5-32.9 11.5 km S (172°, +0.5%) = the C1/C2 state-road stretch (bends at km 24.2/24.4, the intersection Pat flagged on 1 Nov at km 26.0); +94° at 32.9; 32.9-36.5 3.5 km W (262°); +82° at 36.5; 36.5-42.5 6.1 km N (358°, -0.3%); +86° at 42.5; 42.5-50.9 8.4 km E (96°, -0.3%); then -82°/+58° at 50.9/51.1, 2.2 km NE, +84° at 53.3, 6.5 km ENE (60°) and the last corners near home (km 59.8-60.5).
 - [mine] Length check: 60 min at 170-190 W (Stages) covers about 30-31 km in calm air (model then 72 kg, CdA 0.38; on 1 Nov 10.0 km in 20 min at 183 W), so from km 17 the hour ends about km 47-48 on the E leg, with 3 km of buffer to the turn at km 50.9. Inside the hour: 7 sharp turns, four of them in the first 4.5 km (km 20.3-21.5, while still fresh), then three 90° corners about 11, 15 and 21 km in. Net +22 m from km 17 to 47 (barely noticeable).
 - Wind: the legs nearly cancel (S 11.5 km, W 3.5 km, N 6.1 km, E 5-8 km): south wind = headwind on the long S leg and tailwind on the N leg; west wind = headwind on the W leg, tailwind on the E leg (the finish).
-- Status: new on 8 Nov 2026, not ridden as a whole yet; the 60-min test is indoors in week 1 once the new fan is there, this is the outdoor option (a Sunday, for daylight and traffic). Sunset on Sunday 15 Nov 16:47 and 22 Nov 16:38 (Cologne, computed): start the test by about 14:00.
+- Status: new on 8 Nov 2026, not ridden as a whole yet; the 60-min test was done indoors on 12 Nov (175.1 W), so this stays the outdoor option for a later hour test (a Sunday, for daylight and traffic; start by about 14:00 in late November, sunset about 16:30).
 
-### C2: "15km uninterrupted" (komoot tour 3335957752)
+#### C2: "15km uninterrupted" (komoot tour 3335957752)
 - Type: point-to-point, 15.0 km, +58 m; start near Langenich (50.867 N, 6.682 E, about 16 km from home), end near Gladbach (50.762 N, 6.659 E). Ride out, test, ride back.
 - Geometry: south for 11.7 km (161-194°) at +0.2-0.7% (83 to 133 m); soft -48° at km 3.1; sharp +97° at km 11.7; then 3.3 km west.
 - [Pat] Paved throughout. Open fields, no wind shelter. Km 0.8-11.6 is the same road as the C1 south stretch; he rode about 8 km of it in the 1 Nov 4DP.
 - Good for: 20-min test and steady-state blocks in any wind (the effort ends before km 11.7 unless there is a strong northerly tailwind).
 
-### C3: "15km uninterrupted 2" (komoot tour 3335967084)
+#### C3: "15km uninterrupted 2" (komoot tour 3335967084)
 - Type: point-to-point, 15.0 km, +59 m; start near Brüggen/Gymnich (50.855 N, 6.731 E).
 - Geometry: south with six direction changes (+49° km 0.3, -39° km 1.4, +38° km 3.6, +84° km 8.6, -84° km 10.3, +89° km 11.8); longest stretch 4.9 km (km 3.6-8.6).
 - Good for: 20-min test in a headwind or calm only; a tailwind would carry him through the sharp bends.
 
-### C21: "20km uninterrupted" (komoot tour 3379318400)
+#### C21: "20km uninterrupted" (komoot tour 3379318400)
 - Type: point-to-point, 20.0 km, +44/-21 m, steepest 500 m +2.0%; start 50.8115 N, 6.5598 E (23.8 km west of home), end 50.6882 N, 6.7405 E.
 - Geometry: 2 sharp turns (km 0.3, -67°; km 2.4, -56°), then 17.7 km straight SE (133°, +0.1%, km 2.4-20.0).
 - Wind (133°): south wind = quartering headwind, west wind = tailwind. It is identical to the first 20 km of C22.
 - Good for: 17.7 km without a sharp turn (only C17's 21 km straight is longer): a 20-min test in any wind (17.7 km covers even a strong tailwind) and steady state up to about 35 min. The start is about 24 km from home, which serves as the warm-up.
 - Status: new on 5 Nov 2026, not ridden yet.
 
-### C22: "30km uninterrupted" (komoot tour 3379328216)
+#### C22: "30km uninterrupted" (komoot tour 3379328216)
 - Type: point-to-point, 30.0 km, +47/-62 m, steepest 500 m +2.0%; same start as C21, end 50.7588 N, 6.7951 E (about 12 km from home, near the start of C23).
 - Geometry: km 0-20.3 as C21 (18.0 km SE straight), then +105° at km 20.3 and 9.7 km NNE (26°, -0.5%) to the end.
 - Wind: SE leg as C21; NNE leg: south wind = tailwind, west wind = crosswind.
 - Good for: two long steady-state blocks; ends on the way home.
 - Status: new on 5 Nov 2026, not ridden yet.
 
-### C19: "uninterrupted loop (16km)" (komoot tour 3372490972; file of 9 Nov: loop only, route export via the third-party tool)
+#### C19: "uninterrupted loop (16km)" (komoot tour 3372490972; file of 9 Nov: loop only, route export via the third-party tool)
 - Type: loop, 16.5 km, +23/-22 m (flat, 119-139 m, steepest 500 m +0.8%), closes within 19 m; start and end at 50.8027 N, 6.6870 E (15.3 km straight line from home), just before the corner between the ESE and SSE legs. [Pat, 9 Nov] The file now holds only the loop (the earlier komoot export, limited to start and end inside the Rhein-Erft-Kreis, included a 5.3 km approach from 50.8005 N, 6.7627 E).
 - Geometry: 4 corners (km 0.1 +58° where the file starts just before the corner, 4.5 +96°, 8.0 +82°, 14.1 +80°); legs: 4.4 km SSE (164°, +0.4%), 3.5 km W (262°), 6.1 km N (358°, -0.3%), 2.5 km ESE (105°, -0.1%); no other bends of 35° or more.
 - Wind: N leg: south = tailwind, west = crosswind; SSE leg: south = headwind; W leg: west = headwind; ESE leg: west = tailwind.
 - Good for: steady state or a 20-min effort (9.5-10 km in calm air at 185 W = two legs and two corners); laps for longer blocks (one lap about 32-33 min at 30 km/h); about 15 km from home each way.
 - Status: not ridden yet.
 
-### C4: Berrenrather Börde test loops 1-3 (komoot planner: loop 1 = 3335949710, loop 2 = 3335951013, loop 3 = 3319717819)
+#### C4: Berrenrather Börde test loops 1-3 (komoot planner: loop 1 = 3335949710, loop 2 = 3335951013, loop 3 = 3319717819)
 - Three small loops near Knapsack/Brüggen (start about 50.861 N, 6.782 E, 8.1 km from home), each with four corners of about 76-95°.
   - Loop 1: 3.9 km, +10 m, 1.02 corners/km, longest straight about 1.2 km; on a cycleway parallel to the K50 without direct traffic contact.
   - Loop 2: 3.6 km, +4 m, 1.11 corners/km, longest straight about 1.0 km.
@@ -99,47 +111,56 @@ Conventions:
 
 ### Endurance loops from home (by length)
 
-### C20: house loop to Hürth and back via the state road (strava_10km_house_loop.gpx)
+#### C20: house loop to Hürth and back via the state road (strava_10km_house_loop.gpx)
 - Type: loop from home, 10.0 km, +81/-82 m, 9 sharp turns; longest straights 2.1 km N (359°), 2.1 km WSW (248°), 1.9 km SSW (193°). [Pat] A very small cycling route (also runnable).
 - The same route as Strava saved route S12 "Threshold Sprint 10km" (about 90% overlap).
 - Good for: a short recovery spin or a quick opener ride.
 
-### C9: Road cycling 27km (komoot tour 3267868308)
+#### C9: Road cycling 27km (komoot tour 3267868308)
 - Type: loop from home, 27.4 km, +111/-116 m, steepest 500 m +4.9%, highest point 153 m.
 - Geometry: 10 sharp turns (0.36/km); longest straights 10.3 km NNE (23°, -0.4%, from km 16.7), 6.3 km SW (231°, from km 2.8), 4.6 km SE (130°, from km 11.1).
 - Wind (10.3 km straight): south = tailwind, west = quartering tailwind.
 - Good for: a short loop with a 10 km straight for a steady block.
 - Status: [Pat] ridden once.
 
-### C8: Road ride 44km (komoot tour 3213993327)
+#### C8: Road ride 44km (komoot tour 3213993327)
 - Type: loop, 44.3 km, +176/-175 m, steepest 500 m +3.5%, highest point 136 m; start 0.7 km from home (50.8384 N, 6.8885 E).
 - Geometry: 33 sharp turns (0.75/km); longest straights 5.0 km NE (54°, from km 36.6), 4.3 km NNE (from km 2.1, -0.8%), 4.1 km SSE (from km 32.5).
 - Wind (5.0 km straight): south = quartering tailwind, west = tailwind.
 - Good for: easy or moderate rides from the door; many corners, not for steady state.
 - Status: [Pat] ridden twice on a route that follows it closely.
 
-### C15: Road cycling 50km (komoot tour 3216293914)
+#### C15: Road cycling 50km (komoot tour 3216293914)
 - Type: loop from home, 50.0 km, +178/-178 m, steepest 500 m +7.2%, highest point 160 m.
 - Geometry: 18 sharp turns (0.36/km); longest straights 12.2 km NNE (22°, -0.4%, from km 36.4), 11.9 km NW (318°, from km 24.4), 5.8 km SSE (from km 2.6).
 - Wind (12.2 km straight): south = tailwind, west = quartering tailwind.
 - Good for: endurance ride with two 12 km straights for steady blocks.
 - Status: [Pat] ridden once, soon after he got the road bike.
 
-### C11: Road cycling 60km (komoot tour 3280455509)
+#### C11: Road cycling 60km (komoot tour 3280455509)
 - Type: loop from home, 60.3 km, +184/-186 m, steepest 500 m +7.3%, highest point 159 m.
 - Geometry: 17 sharp turns (0.28/km); longest straights 11.6 km NNW (331°, from km 24.8), 8.8 km SSE (163°, from km 0.5), 7.7 km WNW (291°, from km 36.4).
 - Wind (11.6 km straight): south = tailwind, west = quartering headwind.
 - Good for: endurance ride with 8-12 km straights and one short steeper climb.
 - Status: not ridden yet.
 
-### C14: Road ride 60km, second 60 km route (komoot tour 3213949240)
+#### C14: Road ride 60km, second 60 km route (komoot tour 3213949240)
 - Type: loop from home, 60.0 km, +186/-197 m, steepest 500 m +7.2%, highest point 167 m.
 - Geometry: 15 sharp turns (0.25/km); longest straights 15.7 km NW (323°, -0.2%, from km 41.5), 11.4 km SSW (210°, +0.6%, from km 7.6), 9.4 km NNE (17°, from km 32.0).
 - Wind (15.7 km straight): south = tailwind, west = quartering headwind.
 - Good for: endurance ride; the 15.7 km NW leg suits a steady block with a southerly wind at the back.
 - Status: not ridden yet.
 
-### C10: Speedy loop (62km) (komoot tour 3268834956)
+#### C29: Road cycling 59km (komoot tour 3401385578, made by Pat just before the 21 Nov ride; geometry below from the recorded track)
+- Type: loop from home; komoot 58.7 km, +259 m (planned; Pat's file 'Road cycling 59km.gpx' in all_routes_22_11.zip: 58.7 km, +207 m by my smoothing, 36 sharp turns); the recorded track 60.6 km (Strava 60.4 km), +283/-277 m (60 m smoothing; the Edge recorded +367 m), steepest 500 m +4.7%, highest point 161 m; closes within 21 m.
+- Geometry: 41 sharp turns (0.68/km); longest straights 8.9 km ESE (107°, km 36.6-45.5), 7.0 km NNW (341°, km 52.3-59.3), 5.0 km NNE (32°, -1.3%, km 46.2-51.2), 4.3 km WSW (253°, -0.9%, km 11.4-15.7).
+- Wind (8.9 km straight): south = crosswind, west = tailwind.
+- Overlap [mine, points within 40 m of a route in the zip]: about 72% lies on known routes (C11 40%, C27 35%, C25 28%, C1 27%); new roads mainly in km 5.9-25.4 (about 16 km).
+- Good for: a 60 km endurance loop from the door; many corners (0.68/km), so not for long steady blocks.
+- Segments on it (21 Nov): Such dir ein schnelles Hinterrad!, Erp-Friesheim, L33 ost, Knallgas runter (claude/segments.md); the Römersprint road is ridden in reverse (km 57.9-58.6), so no effort.
+- Status: ridden Sat 21 Nov 2026 (60.4 km, Stages NP 157 W; 13 stops over 20 s, the longest 3.5 min at km 13.9). [Pat 22 Nov] A komoot tour, not shared before the ride; its GPX is in all_routes_22_11.zip [Pat 22 Nov].
+
+#### C10: Speedy loop (62km) (komoot tour 3268834956)
 - Type: loop from home, 62.0 km, +184/-195 m, steepest 500 m +4.9%, highest point 153 m.
 - Geometry: 22 sharp turns (0.35/km); longest straights 12.6 km SE (131°, +0.2%, from km 16.8), 10.9 km NNE (24°, -0.4%, from km 50.6), 9.5 km N (353°, from km 37.8).
 - Wind (12.6 km straight): south = quartering headwind, west = tailwind.
@@ -147,42 +168,64 @@ Conventions:
 - Good for: endurance ride with three 9-13 km straights for 10-20 min steady blocks.
 - Status: [Pat] ridden once.
 
-### C17: Road cycling 73km (komoot tour 3262741021)
+#### C17: Road cycling 73km (komoot tour 3262741021)
 - Type: loop from home, 73.7 km, +247/-251 m, steepest 500 m +7.1%, highest point 174 m.
 - Geometry: 35 sharp turns (0.47/km); longest straights 21.1 km SW (218°, +0.5%, km 11.9-33.1), 7.0 km NNW (from km 37.8), 4.4 km N (from km 46.0).
 - Wind (21.1 km straight): south = headwind, west = quartering headwind; the way back is downwind.
 - Good for: a long steady state or a 20-min test on the 21 km straight.
-- Status: not ridden yet.
+- Status: not ridden yet; [plan 20 Nov] the base for the weekend long ride (75-85 km: C17 plus a few km); [Pat 22 Nov] the Sun 22 Nov long ride uses his own 85 km route instead (C30).
 
-### C27: century (komoot tour 3379567079), Pat's plan for the first 100 km ride
+#### C30: Road cycling 85km / 86km (komoot tour 3402107035; Pat's file of 22 Nov, route export via the third-party tool; v2 'Road cycling 86km.gpx' in all_routes_22_11.zip)
+- Type: loop from home, 85.2 km, +266/-267 m (komoot +323 m), steepest 500 m +5.4%, 59-160 m; closes at home; furthest point 23.1 km from home (km 38.8).
+- Geometry: 46 sharp turns (0.54/km); longest straights 7.7 km SSW (208°, +0.4%, km 7.4-15.0), 7.7 km ENE (72°, -0.4%, km 45.9-53.6), 6.7 km WNW (287°, km 17.7-24.4), 6.5 km NNW (340°, km 75.9-82.4), 5.6 km SE (131°, km 59.0-64.6). Climbs: km 6-10 up the Ville (+90 m; steepest km 7.8-8.9, +36 m at 3.2%, 4.2% over 500 m) and km 70.3-71.2 (+29 m, up to 5.4%); descents of 4% or more at km 12.8-13.2 and km 74.3-75.3.
+- Wind (the two 7.7 km straights): SSW leg: south = headwind, west = quartering headwind; ENE leg: south = crosswind, west = tailwind. Out to the west and north-west, back east: an east wind is a tailwind out and a headwind on km 39-54.
+- Overlap [mine, points within 40 m]: about 91% on known routes (C25 34%, C27 33%, C29 29%, C16 26%, C18 25%, C1 23%); new roads km 1.7-2.9, 3.7-5.7 and 43.8-45.6 (about 5 km).
+- Segments in riding direction: Kurfürsten Sprint km 0.6-1.1, Mount Phantasialand km 7.4-9.0, Knallgas runter km 74.6-75.4; in reverse: Otto-Wels-Sprint km 4.1-5.7, Erp-Friesheim km 21.2-23.7.
+  - [22 Nov, `segments_tool.on_route` on v2, start km] Kurfürsten Sprint and Kurfürsten Sprint lang 0.6, No10 revers 2.3, Mount Phantasialand 7.4, RM Phanta go 8.1, Swister Turm runter 12.8, Nörvenich 5km TT 45.9, Nörvenich 6k TT 47.5, Erdbeer-Radweg 57.6, Sprint von A553 zur A61 64.8, Mur von Metternich 71.7, Metternich Climb 71.8, Knallgas runter 75.8, Ortsschildsprint Brühl City 81.5; in reverse Otto-Wels-Sprint 5.7, Zum Swister Turm 13.5, Erp-Friesheim 23.7.
+- v2 [Pat 22 Nov, 12:06]: 86.4 km, +267 m, 49 sharp turns; it differs only at km 53.7-54.5 (past the ED petrol station in Gymnich, 15 m off at km 54.1: the refill) and km 57.1-60.8 (vs v1 km 56.2-59.6); the km figures below are v1.
+- [Pat] Refill first planned just after km 55 in Dirmerzheim (v1 passes it at km 55.0); [Pat 22 Nov] the ED petrol station instead (slightly earlier, on the route). [mine; Sunday opening hours from Google Maps, 22 Nov] Alternatives on or near the route: JET petrol station Siemensstraße, Lechenich (24 h, about 60 m off at km 59.2); Esso Römerhofweg (Sun 08-22 h, 350 m off at km 58.7); ED petrol station Gymnich (Sun 08-21 h, 370 m off at km 53.6); Bäckerei Lennartz, Lechenich (Sun 07-17 h, 850 m off at km 57-59).
+- Shortcuts [mine, straight-line gaps; check the roads]: km 18-22 to km 59-62 (Lechenich) 3.5-4.5 km = about 50 km in total; km 29 to km 42 about 4.5 km = about 75 km; from km 55 straight home about 9 km = about 65 km.
+- Time [mine, model calibrated on the 21 Nov ride, factor 1.043]: about 3:36 h moving at 120 W (23.7 km/h) with a light ENE wind, about 4:00 h with stops; km 55 after about 2:13 h moving. Ridden 22 Nov: 3:36 h moving at 131 W with 29 stops (the model with his real power gives factor 1.049).
+- Good for: an 80-90 km Z2 long ride, the rehearsal before the first 100 km; moderate corners.
+- Segments: No10 revers is the Langenackerstraße in Brühl-Ost [Pat 22 Nov], early in the ride (Brühl-Ost is km 1-5).
+- Status: ridden Sun 22 Nov 2026, the week-2 long ride (v2 with slight deviations [Pat]): start 12:57, 86.5 km, +424 m (Strava), 3:36 h moving at 131 W (NP 143), 4:21 h elapsed with 29 stops of 20 s or more (44 min; 9 min at km 31.6, about 9 min at the ED station); the full route, finish 17:17 (39 min after sunset); in all_routes_22_11.zip.
+- [Pat 22 Nov] Roadworks on the Bonn-Brühler-Straße near the end (also on the 21 Nov ride); the wind barely noticeable.
+
+#### C27: century (komoot tour 3379567079), Pat's plan for the first 100 km ride
 - Type: loop from home, 101.4 km, +312/-312 m, steepest 500 m +6.3%, highest point 195 m; furthest point 30.3 km west of home (route km 59.3, about 50.752 N, 6.488 E).
 - Geometry: 39 sharp turns (0.38/km); longest straights 11.4 km WNW (294°, km 18.9-30.2), 9.0 km ENE (76°, km 77.4-86.4), 7.9 km N (351°, km 57.5-65.4). Climbs of 3% or more over 500 m: km 11.3 (1.3 km, +45 m), km 12.6 (0.9 km, +22 m), km 53.3 (0.9 km, +24 m); otherwise flat.
 - Wind: west = headwind on the way out (WNW leg) and tailwind on the way back (ENE leg); [mine] that is the better order, with the headwind early and fresh.
-- [Pat] The current plan for the first 100 km ride; he may adjust it slightly. [Pat, 6 Nov] Planned for Sun 29 Nov (all weekends possible, Sundays preferred); sunset 16:32 on 29 Nov.
+- [Pat] The current plan for the first 100 km ride; he may adjust it slightly. [Pat, 6 Nov] Planned for Sun 29 Nov (all weekends possible, Sundays preferred); sunset 16:32 on 29 Nov (civil dusk 17:10).
+- Distance from home [mine, straight line, km of route : km from home]: 0:0, 10:9, 20:13, 30:12, 40:18, 50:24, 60:30, 70:25, 80:16, 90:9, 100:1.
+- Time [mine, model factor 1.046, 22 Nov]: at 120 W about 4:24 h moving with an ESE wind of 14 km/h (tailwind out on the WNW leg), about 4:30 h with WSW 17 km/h, 4:13 h calm; from a 10:50 start (moving time only, ESE): km 30 12:07, km 45 about 12:40, km 77 about 14:00, finish about 15:13; add the stops (20-25 min planned; [Pat 22 Nov] target under 15-20 min).
+- Shortcuts [mine, straight-line gaps; check the roads]: km 30-35 to km 89-91 (about 6 km) = about 46-53 km in total; km 40-45 to km 77-79 (8-9.5 km) = about 72-78 km; beyond km 50 none worth taking.
+- Refills [mine; Sunday hours from Google Maps, 22 Nov]: Aral Nörvenich, Bahnhofstraße (Sun 08-22 h, about 140 m off at km 77); the ED station Gymnich (Sun 08-21 h, km 86.4); Aral Zülpich (km 41.6, 2.4 km off) only if needed.
+- Segments on it [22 Nov, `segments_tool.on_route`, start km]: Nörvenich 5km TT 78.7, Nörvenich 6k TT 80.3, Erdbeer-Radweg 89.6, Liblarer->Bleibtreu See 95.5, Theodor-Heuss Downforce 98.3, Kierberger Sprint 100.5; in reverse Ortsschildsprint Brühl City 5.1, L33 ost 29.0, Erp-Friesheim 34.5.
+- [plan, 22 Nov] Week 3, Sun 29 Nov: start 11:00-11:30 (11:45 at the latest; [Pat 22 Nov] finishing up to sunset + 15-20 min is fine), Stages 115-125 W (cap 135) evenly, no segment efforts, about 45-50 g carbohydrate/h from about 0:45 h (with a pre-ride meal of about 150 g), refill at Aral Nörvenich, decision points by clock time: km 45 by about 14:00, leave the refill by about 15:30 (coach_notes.md section 7).
 - Status: new on 5 Nov 2026, not ridden yet.
 
-### C25: 100km 3 (komoot tour 3379365619)
+#### C25: 100km 3 (komoot tour 3379365619)
 - Type: loop from home, 100.4 km, +268/-269 m, steepest 500 m +4.2%, highest point 164 m; furthest point 25.3 km from home (route km 56.7).
 - Geometry: 39 sharp turns (0.39/km); longest straights 10.2 km SSW (204°, +0.4%, km 0.5-10.7), 9.4 km ESE (103°, km 74.1-83.5), 7.5 km NNW (342°, km 51.4-58.9). Only climb of 3% or more: km 4.2 (1.6 km, +45 m).
 - Wind (10.2 km straight): south = headwind, west = quartering headwind.
 - Good for: a flatter 100 km alternative to C27.
 - Status: new on 5 Nov 2026, not ridden yet.
 
-### C16: Road cycling 100km 2 (komoot tour 3257037426)
+#### C16: Road cycling 100km 2 (komoot tour 3257037426)
 - Type: loop from home, 100.3 km, +595/-596 m, steepest 500 m +7.3%, highest point 415 m.
 - Geometry: 52 sharp turns (0.52/km); longest straights 12.0 km NNE (21°, from km 75.9), 11.0 km NNE (23°, from km 87.9), 6.5 km SSE (from km 2.5).
 - Wind (12.0 km straight): south = tailwind, west = quartering tailwind.
 - Good for: a reference for a hilly 100 km.
 - Status: not ridden yet.
 
-### C26: 111km (komoot tour 3379483490)
+#### C26: 111km (komoot tour 3379483490)
 - Type: loop from home, 111.0 km, about +930-950 m (a 59 m elevation spike in the komoot data at km 65.8; with a median filter +927 m), steepest 500 m +9.9%, highest point 512 m; furthest point 40.9 km from home (route km 57.7, about 50.615 N, 6.439 E).
 - Geometry: 68 sharp turns (0.61/km); longest straights 18.5 km WSW (243°, +0.9%, km 20.1-38.6), 10.9 km NNE (24°, km 99.6-110.5), 8.3 km NNE (km 83.9-92.2). Main climbs: km 40.5 (2.4 km, +108 m), km 43.5 (1.6 km, +68 m), km 45.6 (1.7 km, +73 m), km 53.9 (4.3 km, +226 m).
 - Wind (18.5 km straight): south = quartering headwind, west = headwind on the way out; downwind home.
 - Good for: a long hilly ride with real climbs. [mine] Better after the first 100 km than before it.
 - Status: new on 5 Nov 2026, not ridden yet.
 
-### C18: Road ride 150km (komoot tour 3214003257)
+#### C18: Road ride 150km (komoot tour 3214003257)
 - Type: loop from home, 150.1 km, +847/-852 m, steepest 500 m +9.7%, highest point 511 m (some elevation spikes in the komoot data).
 - Geometry: 66 sharp turns (0.44/km); longest straights 12.2 km ESE (from km 126.3), 10.1 km NNE (from km 139.5), 9.7 km SSW (from km 22.9).
 - Good for: a reference for a very long ride (not planned).
@@ -190,7 +233,7 @@ Conventions:
 
 ### Loops away from home
 
-### C23: 30km loop (komoot tour 3379330088)
+#### C23: 30km loop (komoot tour 3379330088)
 - Type: loop, 29.6 km, +52/-51 m, steepest 500 m +2.2%; start 50.7538 N, 6.8076 E (11.7 km from home); furthest point 16.3 km from home.
 - Geometry: 8 sharp turns (0.27/km; turnarounds of -179° at km 1.1 and -148° at km 29.2); longest straights 10.2 km ESE (119°, km 1.1-11.3), 9.5 km N (353°, -0.2%, km 19.7-29.2), 4.0 km WNW (km 14.9-18.9), 3.7 km WSW (km 11.3-14.9).
 - Wind: ESE leg: south = quartering headwind, west = tailwind; N leg: south = tailwind, west = crosswind.
@@ -198,7 +241,7 @@ Conventions:
 - Good for: two 10 km steady-state legs.
 - Status: new on 5 Nov 2026, not ridden yet.
 
-### C24: 50km loop (komoot tour 3379348878)
+#### C24: 50km loop (komoot tour 3379348878)
 - Type: loop, 49.5 km, +94/-95 m, steepest 500 m +2.2% (no climb of 3% or more); start 50.7482 N, 6.8380 E (11.3 km from home); furthest point 21.7 km from home.
 - Geometry: 15 sharp turns (0.30/km); longest straights 8.4 km ESE (105°, km 41.1-49.5), 7.6 km ENE (78°, km 32.2-39.8), 6.8 km ESE (123°, km 0.0-6.8), 5.0 km NW (km 15.2-20.2).
 - Wind (8.4 km straight): south = crosswind, west = tailwind.
@@ -207,12 +250,12 @@ Conventions:
 
 ### Intervals and segments
 
-### C7: Anaerobic 1-3 minute Power Intervals (komoot tour 3252126507)
+#### C7: Anaerobic 1-3 minute Power Intervals (komoot tour 3252126507)
 - Type: loop from home, 23.3 km, +58/-62 m, steepest 500 m +2.9%; 22 sharp turns (0.95/km); longest straights 3.0 km ENE (64°, km 8.4-11.4), 2.9 km W (267°, from km 16.7), 2.4 km NW (308°, from km 20.4).
 - [Pat] The 1-3 min intervals of the 4-week sprint plan (31 Aug-27 Sep) were done on the Hessenweg between Walberberg and Keldenich: quiet and straight, used in both directions; the usual wind (from the Walberberg side) is a tailwind towards Keldenich. Used about 5 times during that plan, never before it. [mine] The 3.0 km ENE stretch at km 8.4-11.4 (50.798 N, 6.927 E to 50.809 N, 6.965 E) matches it by position and heading.
 - Good for: short hard intervals close to home; not for steady state.
 
-### C6: benchmark segments (moved to claude/segments.md on 6 Nov 2026)
+#### C6: benchmark segments (moved to claude/segments.md on 6 Nov 2026)
 - Segment definitions, PRs and every tracked effort now live in claude/segments.md (built by `segments_tool.py`); the notes below are the older list, all of it now in segments.md.
 - Kurfürsten Sprint (0.48 km, 43 s) 305 W; VochemBerg III (0.56 km, 4.9%, 1:25) 277 W; Flammgasse Climb (Bornheim, 0.57 km, 9.8%, 2:16) 270 W; Mount Phantasialand (1.56 km, 3.5%, 3:41) 248 W; Raus aus der Stadt (1.16 km, 1:55) 246 W.
 - Kierberger Sprint (0.74 km): 279 W in 1:15 on 17 Oct (271 W in 1:09 on 27 Sep is still the best time).
@@ -226,7 +269,7 @@ Conventions:
 
 ### Special courses
 
-### C13: "segments to pr (60 s - 4 min)" (komoot tour 3312761158)
+#### C13: "segments to pr (60 s - 4 min)" (komoot tour 3312761158)
 - Type: loop from home, 36.5 km, +234/-236 m, steepest 500 m +7.5%; 40 sharp turns (1.10/km); longest straights 4.1 km NNW (from km 12.2), 3.7 km S (from km 0.1), 2.7 km NW (from km 18.2).
 - [Pat] Made for the 27 Sep segment challenge at the end of the 4-week sprint plan: PR attempts on segments near the 90 s goal duration with very easy riding in between; he did not ride all of them in the order of the route.
 - Good for: segment hunting (60 s-4 min efforts); not for everyday rides.
@@ -262,7 +305,7 @@ Starred in Strava in August (18) and September (1); all start at or near home ex
 ### U1: Schlosspark Brühl loop (main course)
 - Loop of about 1.265 km by GPS (Strava/Samsung just above 1.25 km, komoot 1.30 km), flat, mostly gravel, a few sharper turns (about 3 per lap), no crossings or stops; start 2.4 km from home (50.8249 N, 6.9111 E). 4 laps are about 5.06-5.1 km: time the 5.0 km mark or let Strava pick the best 5K. Pacing per km only. Wet leaves and roots make the sharp turns slippery.
 - Good for: 5K trials, hard runs, easy runs and the weekly long run (from 10 Nov, +1 lap a week): one lap takes about 7:35 at 6:00/km, so 6 laps about 45 min, 7 laps about 53 min, 10 laps about 76 min. On long runs the sharp turns add up: keep them easy on wet leaves.
-- Status: the regular course (5K trial 23:30 on 28 Oct; first long run 10 Nov: 4 laps at 6:00/km, cut short when the phone battery died; next 6 laps).
+- Status: the regular course (5K trial 23:30 on 28 Oct; first long run 10 Nov: 4 laps at 6:00/km, the phone died at 4.25 km; no run in week 2 because of rain; next 6 laps in week 3).
 
 ### U2: Heider Bergsee 5 km loop (komoot "heider bergsee 5k loop", tour 3353737868)
 - 5.00 km, +30/-20 m, steeper ups and downs; harder than the Schlosspark.
@@ -280,7 +323,7 @@ Starred in Strava in August (18) and September (1); all start at or near home ex
 
 ## Template for new routes
 ```
-### <ID>: <name> (<source: komoot tour id / file name>)
+#### <ID>: <name> (<source: komoot tour id / file name>)   (running courses: ###)
 - Type: loop|point-to-point|out-and-back, distance, ascent/descent, steepest 500 m, highest point; start (coordinates, distance from home)
 - Geometry: sharp turns, longest straights (km, heading, grade), climbs
 - Wind: effect of south and west winds on the longest straight
