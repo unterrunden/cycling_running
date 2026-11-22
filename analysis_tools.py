@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""analysis_tools.py (v2.1, 2026-11-12) - quick analysis of Strava/Garmin GPX and FIT / FIT.GZ files.
+"""analysis_tools.py (v3, 2026-11-22) - quick analysis of Strava/Garmin GPX and FIT / FIT.GZ files, plus (v3) the long-ride report and route planner.
 
 Works for rides (with power) and runs (HR + pace).  Needs python3 + numpy; FIT files also need fitparse
 (pip install fitparse --break-system-packages); --batch also needs pandas.
@@ -8,6 +8,8 @@ Usage examples
   python analysis_tools.py ride.gpx            # FTP and easy cap from cp_lib.CFG (one source of truth)
   python analysis_tools.py ride.gpx --ftp 175
   python analysis_tools.py run.gpx --lap 1265 --target 5000
+  python analysis_tools.py ride.fit --report --carbs 155 --fluid 1400      # v3 long-ride report (cp_lib v1.15 metrics; needs cp_lib, routes_tool, segments_tool)
+  python analysis_tools.py --plan route.gpx --power 120 --start 11:30 --date 2026-11-29 --wind 15 --wind-from 240   # v3 route planner
 Options
   --ftp N      FTP used for zones/IF (default: cp_lib.CFG['ftp'], the working / planning FTP; 180 W if cp_lib is missing)
   --z2cap N    easy-ride power cap in watts (default: cp_lib.CFG['z2cap'], 135 W)
@@ -18,6 +20,11 @@ Options
   --batch DIR  analyse every file listed in --csv (Strava activities.csv) found in DIR; writes --out files
   --csv FILE   Strava activities.csv (columns 'Filename', 'Activity Date', 'Activity Type')
   --out DIR    output folder for --batch (default digest)
+  --report     v3 long-ride report: stops, load (NP/IF/TSS, intensity shares), 15-min blocks, power bands, cleaned HR (artefacts, gaps),
+               HR at power, decoupling, EF, HRR, bests, first vs last hour, fuel/fluid per hour (--carbs g, --fluid ml), daylight,
+               tracked segments ridden (segments.json)
+  --plan GPX   v3 route planner: moving time at --power W (calibrated model, routes_tool.route_time), clock times per 10 km from --start,
+               finish vs sunset / civil dusk on --date, climbs, cut options; --wind km/h --wind-from deg
 
 What it prints (and flags)
   rides: time/distance, avg power (with and without zeros), NP, VI, IF/TSS-like,
@@ -27,6 +34,7 @@ What it prints (and flags)
          HR at pace table, time at target distance
   both : data-quality flags (HR flat-lines, sudden HR jumps, recording gaps)
 """
+import os
 import re
 import sys
 import argparse
@@ -529,6 +537,120 @@ def _batch(args):
     print("rides %d, runs %d -> %s" % (len(rides), len(runs), args.out))
 
 
+# ----------------------------------------------------------------------------- v3: LONG-RIDE REPORT AND ROUTE PLANNER
+def _local(ts, tz="Europe/Berlin"):
+    from zoneinfo import ZoneInfo
+    return datetime.fromtimestamp(ts, timezone.utc).astimezone(ZoneInfo(tz))
+
+
+def long_ride_report(path, ftp=None, z2cap=None, carbs_g=None, fluid_ml=None, stop_s=20, tz="Europe/Berlin", show=True):
+    """Everything Claude computed by hand for the 21 / 22 Nov outdoor rides, in one call (cp_lib v1.15 metrics). FTP defaults to the
+    monthly load FTP (cp_lib.ftp_for), the easy cap to CFG z2cap. Returns a dict; prints a readable report when show=True."""
+    import cp_lib as cp
+    a, ex, tl = cp.load_activity(path); x = cp.session_1hz(path, "ride"); n = len(x["P"]); m = x["mov"]
+    t0 = _local(a[0, 0], tz); t1 = _local(a[0, 0] + n, tz); day = t0.date()
+    ftp = ftp or cp.ftp_for(day.isoformat()); z2cap = z2cap or cp.CFG["z2cap"]
+    H, bad, blank = cp.clean_hr(x, "ride"); xc = dict(x, H=H)
+    L = cp.ride_load(x, ftp); hs = cp.hr_stats(xc); dec = cp.aero_decoupling(xc, "ride", ftp); ef = cp.efficiency_factor(xc, "ride")
+    hrr = cp.hrr_events(xc, "ride", ftp)
+    # stops (not moving) of at least stop_s seconds, with the km where they start
+    stops = []; i = 0; D = np.nan_to_num(x["D"])
+    while i < n:
+        if not m[i]:
+            j = i
+            while j < n and not m[j]: j += 1
+            if j - i >= stop_s: stops.append((i / 60.0, j - i, D[min(i, n - 1)] / 1000))
+            i = j
+        else: i += 1
+    P = x["P"][m]; Hm = H[m]; C = x["C"][m]; V = x["V"][m]; idx = np.where(m)[0]
+    bands = dict(easy=float(np.mean(P <= z2cap) * 100), mid=float(np.mean((P > z2cap) & (P <= 0.9 * ftp)) * 100),
+                 hard=float(np.mean(P > 0.9 * ftp) * 100), w200=float(np.mean(P >= 200) * 100), zero=float(np.mean(P == 0) * 100))
+    blocks = []
+    for k in range(0, len(idx), 900):
+        sl = slice(k, k + 900)
+        if len(P[sl]) < 120: continue
+        c = C[sl]; blocks.append(dict(min=k / 60, km=D[idx[k]] / 1000, w=float(P[sl].mean()), np=float(cp.norm_power(P[sl])),
+                                      hr=float(np.nanmean(Hm[sl])) if np.isfinite(Hm[sl]).any() else np.nan,
+                                      cad=float(np.nanmean(c[c > 0])) if (c > 0).any() else np.nan, kmh=float(np.mean(V[sl]) * 3.6)))
+    win = cp.hr_power_windows(dict(P=x["P"], H=H, S=np.where(m, 2.0, 0.0)), win_s=300, hr_last_s=120, skip_s=900)
+    hrp = []
+    for lo, hi in ((90, 110), (110, 125), (125, 145), (145, 160), (160, 180), (180, 210)):
+        w = win[(win[:, 0] >= lo) & (win[:, 0] < hi)] if len(win) else np.zeros((0, 2))
+        if len(w) >= 3: hrp.append((lo, hi, len(w), float(np.median(w[:, 1]))))
+    best = {}
+    for d in (5, 60, 300, 1200, 3600):
+        if n >= d: best[d] = float(np.max(np.convolve(x["P"], np.ones(d) / d, "valid")))
+    # first vs last hour of moving time
+    hours = []
+    for lab, sl in (("first hour", slice(0, 3600)), ("last hour", slice(max(0, len(idx) - 3600), len(idx)))):
+        if len(idx) >= 7200:
+            p, h = P[sl], Hm[sl]; hours.append((lab, float(p.mean()), float(cp.norm_power(p)), float(np.nanmean(h)), float(cp.norm_power(p) / np.nanmean(h))))
+    eh = n / 3600.0
+    sun = cp.sun_times(day); dusk = cp.sun_times(day, zenith=96)
+    fin = t1.strftime("%H:%M"); sset = sun[1]; mins_after = (t1.hour * 60 + t1.minute) - (int(sset[:2]) * 60 + int(sset[3:]))
+    segs = []
+    try:
+        import segments_tool as st
+        data = st.load_segments(); ride = {"ride": st._from_fit_bytes(open(path, "rb").read())} if path.lower().endswith(".fit") else None
+        if ride:
+            for sg in data["segments"]:
+                if not sg.get("ref"): continue
+                for e in st.find_efforts(ride, sg["ref"]):
+                    segs.append((e["start"].strftime("%H:%M"), sg["name"], e["time_s"], e["w"], e["hr"]))
+    except Exception as err:
+        segs = [("-", "segment check failed: %s" % err, 0, np.nan, np.nan)]
+    out = dict(start=t0.strftime("%Y-%m-%d %H:%M"), finish=fin, elapsed_s=n, moving_s=int(m.sum()), stops=stops, load=L, bands=bands, blocks=blocks,
+               hr=hs, hr_bad=bad, hr_blank=blank, hr_power=hrp, dec=dec, ef=ef, hrr=hrr, best=best, hours=hours, sun=sun, dusk=dusk,
+               min_after_sunset=mins_after, segments=sorted(segs), ftp=ftp,
+               carbs_gph=(carbs_g / eh) if carbs_g else None, fluid_mlph=(fluid_ml / eh) if fluid_ml else None)
+    if show:
+        print("%s: start %s, finish %s (sunset %s, civil dusk %s: %+d min vs sunset)" % (os.path.basename(path), out["start"], fin, sset, dusk[1], mins_after))
+        print("  %.1f km, moving %s, elapsed %s; stops >= %d s: %d, %s in total" % (L.get("km", np.nan), fmt_t(out["moving_s"]), fmt_t(n), stop_s, len(stops), fmt_t(n - out["moving_s"])))
+        print("  stops (ride min, s, km): " + ", ".join("%.0f/%d/%.1f" % s_ for s_ in stops))
+        print("  load at FTP %.0f: avg %.0f W, NP %.0f, IF %.2f, TSS %.0f, VI %.2f; easy %.0f%% / tempo %.0f%% / thr+ %.0f%%; cadence %.0f" % (
+            ftp, L["avg_w"], L["np_w"], L["IF"], L["tss"], L["vi"], L["easy_pct"], L["z3_pct"], L["z4_pct"], L["cad"]))
+        print("  moving time at <= %.0f W %.0f%%, %.0f-%.0f W %.0f%%, > %.0f W %.0f%%, >= 200 W %.0f%%, 0 W (coasting) %.0f%%" % (
+            z2cap, bands["easy"], z2cap, 0.9 * ftp, bands["mid"], 0.9 * ftp, bands["hard"], bands["w200"], bands["zero"]))
+        print("  15-min blocks (moving): " + "; ".join("%.0f' %.0f W (NP %.0f) HR %.0f %.0f rpm %.1f km/h" % (b["min"], b["w"], b["np"], b["hr"], b["cad"], b["kmh"]) for b in blocks))
+        print("  HR (cleaned) avg %.0f, max %.0f (30 s %.0f); blanked %.1f%% of moving time; artefact ranges %s" % (hs["hr_avg"], hs["hr_max"], hs["hr30"], blank * 100, bad))
+        print("  HR at power (5-min windows, HR of the last 2 min, median): " + "; ".join("%d-%d W %d win -> %.0f" % r_ for r_ in hrp))
+        print("  decoupling %.1f%% %s; EF %.2f; HRR %s" % (dec["dec"], dec["dec_flag"], ef, [(round(t / 60, 1), round(d_, 1), k) for t, h_, d_, k in hrr]))
+        print("  bests (elapsed): " + ", ".join("%s %.0f W" % (("%d s" % d) if d < 60 else ("%d min" % (d // 60)), v) for d, v in best.items()))
+        for lab, w, np_, h, e_ in hours: print("  %s: avg %.0f W, NP %.0f, HR %.0f, NP/HR %.3f" % (lab, w, np_, h, e_))
+        if out["carbs_gph"]: print("  carbohydrate %.0f g = %.0f g/h of elapsed time" % (carbs_g, out["carbs_gph"]))
+        if out["fluid_mlph"]: print("  fluid %.0f ml = %.0f ml/h" % (fluid_ml, out["fluid_mlph"]))
+        for s_ in sorted(segs): print("  segment %s %-34s %4.0f s %4.0f W HR %.0f" % s_)
+    return out
+
+
+def route_plan(gpx, power=120.0, start="12:00", date=None, wind_kmh=0.0, wind_from=0.0, every_km=10, show=True):
+    """Route planner: moving time at `power` (routes_tool.route_time, calibrated), clock times every `every_km` km from `start` (moving
+    time only: add the planned stops), finish vs sunset / civil dusk on `date`, climbs (500 m windows >= 3%) and cut options."""
+    import cp_lib as cp, routes_tool as rt
+    from datetime import date as _date
+    r = rt.analyse(gpx); t = rt.route_time(r, power, wind_kmh, wind_from); day = _date.fromisoformat(date) if date else _date.today()
+    h0, m0 = (int(v) for v in start.split(":")); clock = lambda sec: "%02d:%02d" % divmod(int(h0 * 60 + m0 + sec / 60), 60)
+    marks = [(k, t["at_km"](k)) for k in range(every_km, int(r["km"]) + 1, every_km)] + [(r["km"], t["sec"])]
+    sun = cp.sun_times(day); dusk = cp.sun_times(day, zenith=96)
+    s = r["s"] / 1000; e = r["rel"]; w = int(round(0.5 / (s[1] - s[0]))); g = (e[w:] - e[:-w]) / 5.0; climbs = []; i = 0
+    while i < len(g):
+        if g[i] >= 3:
+            j = i
+            while j < len(g) and g[j] >= 3: j += 1
+            climbs.append((round(float(s[i]), 1), round(float(s[j - 1] + 0.5), 1), round(float(e[min(j - 1 + w, len(e) - 1)] - e[i])), round(float(g[i:j].max()), 1))); i = j
+        else: i += 1
+    out = dict(km=r["km"], asc=r["asc"], turns=len(r["turns"]), moving_s=t["sec"], kmh=t["kmh"], marks=marks, sun=sun, dusk=dusk, climbs=climbs,
+               shortcuts=rt.shortcuts(r) if r["km"] > 60 else [])
+    if show:
+        print("%s: %.1f km, +%.0f m, %d sharp turns; at %.0f W (wind %.0f km/h from %.0f deg): %s moving, %.1f km/h (factor %.3f)" % (
+            os.path.basename(gpx), r["km"], r["asc"], len(r["turns"]), power, wind_kmh, wind_from, fmt_t(t["sec"]), t["kmh"], t["factor"]))
+        print("  from %s (moving time only): " % start + ", ".join("km %.0f %s" % (k, clock(sec)) for k, sec in marks))
+        print("  %s: sunset %s, civil dusk %s; add the stops to the finish time" % (day.isoformat(), sun[1], dusk[1]))
+        print("  climbs (500 m >= 3%%): %s" % climbs)
+        for k, kl, gap, skip in out["shortcuts"]: print("  cut: from km %d to km %.1f is %.1f km straight line (skips about %.0f km)" % (k, kl, gap, skip))
+    return out
+
+
 # ----------------------------------------------------------------------------- main
 def _cfg_defaults():
     """FTP and easy cap from cp_lib.CFG (same folder), so the CLI follows the planning FTP without a second place to edit; fallback 180 / 135 W."""
@@ -554,11 +676,24 @@ def main():
     ap.add_argument("--batch")
     ap.add_argument("--csv")
     ap.add_argument("--out", default="digest")
+    ap.add_argument("--report", action="store_true")
+    ap.add_argument("--carbs", type=float, default=None)
+    ap.add_argument("--fluid", type=float, default=None)
+    ap.add_argument("--plan")
+    ap.add_argument("--power", type=float, default=120.0)
+    ap.add_argument("--start", default="12:00")
+    ap.add_argument("--date")
+    ap.add_argument("--wind", type=float, default=0.0)
+    ap.add_argument("--wind-from", type=float, default=0.0)
     args = ap.parse_args()
     cfg = _cfg_defaults()
     if args.ftp is None: args.ftp = cfg["ftp"]
     if args.z2cap is None: args.z2cap = cfg["z2cap"]
-    if args.batch:
+    if args.plan:
+        route_plan(args.plan, args.power, args.start, args.date, args.wind, args.wind_from)
+    elif args.report and args.file:
+        long_ride_report(args.file, None if args.ftp == cfg["ftp"] else args.ftp, args.z2cap, args.carbs, args.fluid, tz=args.tz)
+    elif args.batch:
         if not args.csv:
             raise SystemExit("--batch needs --csv")
         _batch(args)

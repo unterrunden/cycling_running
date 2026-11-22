@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""selfcheck.py - regression test of the coaching toolkit (analysis_tools.py, routes_tool.py, cp_lib.py).
+"""selfcheck.py - regression test of the coaching toolkit (analysis_tools.py, routes_tool.py, cp_lib.py, segments_tool.py, digest_tool.py).
 
 Run in a fresh chat after cloning the repo:   pip install fitparse scipy pandas --break-system-packages ; python3 selfcheck.py
 It reproduces numbers that were validated against Strava / the chats (20 Sep ride, 22 Sep hour, route geometry, C19 loop, 5K trial, 4DP ...),
@@ -341,6 +341,16 @@ def main():
               not st.is_tracked(dict(time_s=76, w=float("nan"), w_el=float("nan")), dict(time_s=69, w=float("nan")), -0.2),   # 1.10 x on the flat
               st.is_tracked(dict(time_s=84, w=float("nan"), w_el=float("nan")), dict(time_s=69, w=float("nan")), 4.2)]        # 1.22 x on a climb
         check("segments: tracking rule (80% of PR power, stops count, time rule without power)", all(ok), str(ok))
+        dat = dict(capability=dict(points=[[60, 345], [300, 248], [1200, 184]]), tracking={})
+        seg = dict(grade_pct=-0.3); E = lambda t, w: dict(time_s=t, w=w, w_el=w)
+        ef = [E(68, 206), E(70, 160), E(75, float("nan"))]                                  # Römersprint-like: PR at 62% of ability
+        ef2 = [E(94, 236), E(100, 225), E(110, float("nan")), E(90, float("nan"))]          # Metternich-like: PR at 78%
+        cp60 = st.capability(dat, 60); cp300 = st.capability(dat, 300)
+        f1 = st.track_flags(ef, seg, dat); f2 = st.track_flags(ef2, dict(grade_pct=8.2), dat)
+        f3 = st.track_flags([E(794, 135)], dict(grade_pct=-0.4), dict(capability=dict(points=[[600, 202], [1200, 184]]), tracking={}))
+        check("segments v1.5 (22 Nov): ability curve 345 / 248 W; weak PR not tracked (and no-power not faster); 78% PR + 72% tracked, no-power by time; Z2 TT under 90% FTP not tracked",
+              cp60 == 345 and cp300 == 248 and f1 == [False, False, False] and f2 == [True, True, True, True] and f3 == [False] and st.track_flags(ef2, dict(track=False), dat) == [False] * 4,
+              "%s %s %s %s %s" % (cp60, cp300, f1, f2, f3))
         e = lambda **k: {**dict(time_s=45, w=230, hr=135, hr_start=105, hr_end=165), **k}
         fl = [st.hr_flag(e()), st.hr_flag(e(hr_end=72, hr=70, hr_start=70)), st.hr_flag(e(hr_start=141, hr_end=130, hr=137)), st.hr_flag(e(time_s=150, hr=125, hr_end=150)), st.hr_flag(e(w=150, hr=90, hr_end=90)),
               st.hr_flag(e(w=180, time_s=238, hr=106, hr_start=128, hr_end=96)), st.hr_flag(e(hr_cov=0.5))]
@@ -362,7 +372,87 @@ def main():
         check("segments: 27 Sep Flammgasse 136 s / 270 W; Kierberger 2 efforts 106 s + 69 s (Strava 109 / 69 s)",
               len(e1) == 1 and abs(e1[0]["time_s"] - 136) <= 1 and abs(e1[0]["w"] - 270.3) < 1.5 and len(e2) == 2 and abs(e2[1]["time_s"] - 69) <= 1 and abs(e2[0]["time_s"] - 108) <= 3,
               "%s / %s" % ([round(e["time_s"]) for e in e1], [round(e["time_s"]) for e in e2]))
+        f21 = os.path.join(HERE, "tests", "21_11_garmin.fit")
+        if not os.path.exists(f21) or not all(k in seg for k in (7228295, 17985090, 18357516)):
+            return skip("segments: 21 Nov efforts", "tests/21_11_garmin.fit or the 22 Nov segments missing")
+        a21 = {"21_11": st._from_fit_bytes(open(f21, "rb").read())}
+        e3 = st.find_efforts(a21, seg[7228295]["ref"]); e4 = st.find_efforts(a21, seg[17985090]["ref"]); e5 = st.find_efforts(a21, seg[18357516]["ref"])
+        check("segments (22 Nov): 21 Nov Erp-Friesheim 303 s / 156 W and Knallgas runter 62 s (Strava 303 s / 156.3 W, 62 s); Romersprint ridden in reverse = no effort",
+              len(e3) == 1 and abs(e3[0]["time_s"] - 303) <= 1 and abs(e3[0]["w"] - 156.3) < 1.5 and len(e4) == 1 and abs(e4[0]["time_s"] - 62) <= 1 and not e5,
+              "%s / %s / %d" % ([(round(e["time_s"]), round(e["w"], 1)) for e in e3], [round(e["time_s"]) for e in e4], len(e5)))
     guarded(segments)
+
+    def tools_v3():
+        f22 = os.path.join(HERE, "tests", "22_11_garmin.fit")
+        if not os.path.exists(f22): return skip("tools v3 (22 Nov)", "tests/22_11_garmin.fit not in the repo")
+        import routes_tool as rt, analysis_tools as at
+        fac = rt.calibrate_time(f22, 131.3, 12973)
+        check("routes_tool v3: time model on the 22 Nov ride (86.9 km track, 131.3 W, 216:13 moving) -> factor 1.049 (21 Nov: 1.043; TIME_FACTOR 1.046)",
+              abs(fac - 1.049) < 0.004 and abs(rt.TIME_FACTOR - 1.046) < 1e-9, "%.4f" % fac)
+        r = at.long_ride_report(f22, show=False)
+        check("analysis_tools v3: long-ride report 22 Nov: 86.5 km, NP 143, TSS 241, 29 stops (44:29), finish 17:17 (+39 min vs sunset), decoupling -4.1",
+              abs(r["load"]["km"] - 86.5) < 0.1 and abs(r["load"]["np_w"] - 143) < 1 and abs(r["load"]["tss"] - 240.5) < 1.5 and len(r["stops"]) == 29
+              and r["elapsed_s"] - r["moving_s"] == 2669 and r["finish"] == "17:17" and r["min_after_sunset"] == 39 and abs(r["dec"]["dec"] + 4.1) < 0.15,
+              "%.1f km NP %.0f TSS %.0f stops %d (%d s) %s %+d dec %.1f" % (r["load"]["km"], r["load"]["np_w"], r["load"]["tss"], len(r["stops"]), r["elapsed_s"] - r["moving_s"], r["finish"], r["min_after_sunset"], r["dec"]["dec"]))
+        import segments_tool as st
+        on = st.on_route(f22); names = {n: d for k, n, d in on}
+        check("segments_tool v1.5: on_route of the 22 Nov ride: No10 revers and Metternich Climb forward, Otto-Wels-Sprint and Erp-Friesheim in reverse",
+              names.get("No10 revers") == "fwd" and names.get("Metternich Climb") == "fwd" and names.get("Otto-Wels-Sprint") == "rev" and names.get("Erp-Friesheim") == "rev", str(on[:6]))
+    guarded(tools_v3)
+
+    def doc_check():
+        import cp_lib as cp
+        r = cp.doc_token_check("FTP 175 W [Pat 12 Nov]; sunset 16:38; id 21059503183", "FTP 175 W; sunset 16:38", show=False)
+        check("cp_lib v1.16: doc_token_check finds the dropped number and tag", r["numbers"] == ["12", "21059503183"] and r["tags"] == ["[Pat 12 Nov]"], str(r))
+    guarded(doc_check)
+
+    def metrics_synthetic():
+        import cp_lib as cp
+        n = 3600; x = dict(P=np.full(n, 175.0), H=np.full(n, 150.0), C=np.full(n, 85.0), D=np.linspace(0, 36000, n), V=np.full(n, 10.0), mov=np.ones(n, bool))
+        L = cp.ride_load(x, 175.0)
+        check("metrics: 1 h at FTP -> NP 175, IF 1.00, TSS 100, easy 0 %", abs(L["np_w"] - 175) < 1e-6 and abs(L["tss"] - 100) < 0.1 and L["easy_pct"] == 0, "%.2f" % L["tss"])
+        r = dict(x, V=np.full(n, 1000 / 300.0), D=np.linspace(0, 12000, n)); Lr = cp.run_load(r, 300.0)
+        check("metrics: 1 h at threshold pace -> rTSS 100", abs(Lr["tss"] - 100) < 0.5 and abs(Lr["IF"] - 1) < 0.01, "%.1f" % Lr["tss"])
+        import pandas as pd
+        P = cp.pmc({d.strftime("%Y-%m-%d"): 100.0 for d in pd.date_range("2026-01-01", periods=400)}, "2026-01-01", "2027-02-04")
+        check("metrics: PMC of a constant 100 TSS/day -> CTL and ATL about 100", abs(P.ctl.iloc[-1] - 100) < 0.5 and abs(P.atl.iloc[-1] - 100) < 0.1)
+        h = np.concatenate([np.full(1950, 140.0), np.full(1650, 147.0)]); d = cp.aero_decoupling(dict(x, P=np.full(n, 130.0), H=h), "ride", 175.0)
+        check("metrics: decoupling of a 5% HR rise at steady power -> +5.0% (unflagged)", abs(d["dec"] - 5.0) < 0.2 and d["dec_flag"] == "", "%.2f %s" % (d["dec"], d["dec_flag"]))
+        P2 = np.concatenate([np.full(600, 120.0), np.full(120, 260.0), np.zeros(300), np.full(600, 120.0)]); m = len(P2); tt = np.arange(m, dtype=float)
+        H2 = np.where(tt < 600, 135.0, np.where(tt < 720, 135 + 50 * (1 - np.exp(-(tt - 600) / 30)), 0)); pk = 135 + 50 * (1 - np.exp(-120 / 30))
+        H2 = np.where(tt >= 720, 100 + (pk - 100) * np.exp(-(tt - 720) / 45), H2)
+        ev = cp.hrr_events(dict(P=P2, H=H2, V=np.full(m, 8.0), mov=np.ones(m, bool)), "ride", 175.0)
+        exp_drop = (pk - 100) * (1 - np.exp(-60 / 45))
+        check("metrics: HRR finds one recovery after a 2-min effort (peak in Z5 -> max)", len(ev) == 1 and ev[0][3] == "max" and abs(ev[0][2] - exp_drop) < 2, str([(round(e[1]), round(e[2], 1), e[3]) for e in ev]))
+        check("metrics: score scale anchors (P50 75, P10 55, P90 88, P97.5 93)", [cp.scale_score(p) for p in (50, 10, 90, 97.5)] == [75, 55, 88, 93])
+        check("metrics: HCI context of the reference session is 0", abs(cp.hci_context(dict(temp=18, fancat="out", feel=5, atl=35, rpe=np.nan), dict(t_c=0.4, nofan=10, oldfan=7, feel_d=0.2, atl_d=-0.03, rpe_dev=2), (0, 0, 0))[0]) < 1e-9)
+        y = np.linspace(0, 1, 200); f1 = cp.lowpass2(np.r_[np.zeros(10), np.ones(190)], 20, 60)
+        check("metrics: HR model lag rises with t_on 20 s (63% after 20 s)", abs(f1[30] - (1 - (1 - 1 / 20) ** 21)) < 0.02, "%.3f" % f1[30])
+    guarded(metrics_synthetic)
+
+    def digest_v2():
+        exp = sorted(find_all("strava_export_*.zip"))
+        if not exp or not find("session_context.csv"): return skip("digest_tool", "export zip or data/session_context.csv missing")
+        import digest_tool as dg, tempfile, json
+        need = [f for f in ("14_11_garmin.fit", "15_11_garmin.fit", "18_11_garmin.fit", "20_11_garmin.fit") if not find(f)]
+        if need: return skip("digest_tool", "chat FITs missing in tests/: " + ", ".join(need))
+        tmp = tempfile.mkdtemp(); out = os.path.join(tmp, "digest.md")
+        M, S, P, B = dg.main(["--root", HERE, "--export", find_all("strava_export_09_11.zip")[0] if find_all("strava_export_09_11.zip") else exp[0],
+                              "--out", out, "--tables", tmp, "--asof", "2026-11-20", "--quiet", "--no-sync"])
+        g = lambda d, col: float(M[(M.date == d)][col].iloc[0])
+        bd = lambda d, col: float(B[B.date == d][col].max())
+        check("digest_tool: bests 1 Nov 5 s 685.6 W, 22 Sep 60 min stops excl. 170.0 W", abs(bd("2026-11-01", "el_5s") - 685.6) < 0.2 and abs(bd("2026-09-22", "ro_60min") - 170.0) < 0.1,
+              "%.1f / %.1f" % (bd("2026-11-01", "el_5s"), bd("2026-09-22", "ro_60min")))
+        check("digest_tool: indoor Stages 20 Nov 30 s 449.0 W, 12 Nov 60 min 175.1 W", abs(bd("2026-11-20", "el_30s") - 449.0) < 0.2 and abs(bd("2026-11-12", "el_60min") - 175.1) < 0.1)
+        check("digest_tool: 12 Nov hour test NP 175.5 W, TSS 100.5 (FTP 175)", abs(g("2026-11-12", "np_w") - 175.5) < 0.1 and abs(g("2026-11-12", "tss") - 100.5) < 0.3, "%.1f" % g("2026-11-12", "tss"))
+        check("digest_tool: 22 Sep TSS 109 at FTP 170 (NP 177.7)", abs(g("2026-09-22", "tss") - 109.2) < 0.5, "%.1f" % g("2026-09-22", "tss"))
+        ref = json.load(open(find("hci_reference.json"))); h = S[(S.flag.fillna("") == "") & (S.date <= ref.get("calibrated", "2026-11-20"))].HCI.dropna()
+        check("digest_tool: HCI of the reference sessions has median 75, P10 about 55, P90 about 88", abs(h.median() - 75) < 1 and abs(h.quantile(.1) - 55) < 3 and abs(h.quantile(.9) - 88) < 3 and len(h) == ref["n"],
+              "median %.1f P10 %.1f P90 %.1f n %d" % (h.median(), h.quantile(.1), h.quantile(.9), len(h)))
+        check("digest_tool: 11 Nov HR max 194 survives the cleaning; 17 Oct (strap) has no HCI", g("2026-11-11", "hr_max") == 194 and S[S.date == "2026-10-17"].flag.iloc[0] == "-")
+        txt = open(out, encoding="utf-8").read()
+        check("digest_tool: digest has sections 0-8 and the split per-ride tables 5a / 5b", all(("## %d." % i) in txt for i in range(9)) and "### 5a." in txt and "### 5b." in txt)
+    guarded(digest_v2)
 
     n = {k: sum(1 for x in RES if x[0] == k) for k in ("PASS", "FAIL", "SKIP")}
     print("\nSUMMARY: %(PASS)d passed, %(FAIL)d failed, %(SKIP)d skipped" % n)

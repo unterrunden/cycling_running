@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""routes_tool.py (v2) - GPX route geometry for the 'cycling | running' project (komoot / Strava GPX; needs numpy).
+"""routes_tool.py (v3, 2026-11-22) - route geometry for the 'cycling | running' project (komoot / Strava GPX, or a ride FIT; needs numpy).
 
-Python:  from routes_tool import analyse, stretches, moderate_bends, loop_closure, elevation_diag, compare_routes, route_entry_md, wind_rel, compass
+Python:  from routes_tool import analyse, stretches, moderate_bends, loop_closure, elevation_diag, compare_routes, route_entry_md, wind_rel, compass,
+                              route_time, route_overlap, shortcuts, near_places   (v3: time model, overlap with other routes, cut options, refill places)
 CLI:     python3 routes_tool.py [DIR]                    table of every route in DIR (default gpx/)
          python3 routes_tool.py --compare A.gpx B.gpx    differences between two versions of a route
          python3 routes_tool.py --diag FILE.gpx          elevation / data-quality diagnostics
          python3 routes_tool.py --entry FILE.gpx [ID]    markdown entry for routes_and_courses.md
+         python3 routes_tool.py --time FILE.gpx [W]      moving-time estimate at W (default 120) with the calibrated model
 Method notes (validated on the 4DP loop: 17 turns with merge_km=0.35 as in the first chat, 19 without; positions/angles within 1-8 degrees):
   * route resampled every 20 m; a sharp turn = heading change >= 55 degrees between the 100 m before and the 100 m after (win);
   * merge_km > 0 merges turns closer than that (keeps the larger angle): merge_km=0.35 reproduces the first chat's counts;
@@ -21,7 +23,13 @@ COMP = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW
 
 
 def parse(path):
-    """GPX -> (lat, lon, ele, name) arrays; reads track points (<trkpt>) or route points (<rtept>), lat/lon in either order."""
+    """GPX -> (lat, lon, ele, name) arrays; reads track points (<trkpt>) or route points (<rtept>), lat/lon in either order.
+    v3: a FIT / FIT.GZ ride works too (positions of the recorded track via cp_lib.load_activity; name = file name)."""
+    if path.lower().endswith(('.fit', '.fit.gz')):
+        import cp_lib as cp
+        a, ex, tl = cp.load_activity(path); ok = np.isfinite(a[:, 1]) & np.isfinite(a[:, 2])
+        if ok.sum() < 2: raise ValueError('%s: no GPS positions (indoor file?)' % path)
+        return a[ok, 1], a[ok, 2], a[ok, 3], os.path.basename(path)
     txt = open(path, encoding='utf-8').read()
     tag = 'trkpt' if '<trkpt' in txt else 'rtept'          # komoot track export (<trk>) or route export (<rte>, 'komootGPXport')
     pts = re.findall(r'<%s[^>]*lat="(-?[\d.]+)"[^>]*lon="(-?[\d.]+)"[^>]*>(.*?)</%s>' % (tag, tag), txt, re.S)
@@ -180,12 +188,91 @@ def route_entry_md(cid, path, title=None, src='', note='', good='', kind='ride')
     return '\n'.join(L)
 
 
+# ----------------------------------------------------------------------------- v3: TIME MODEL, OVERLAP, CUT OPTIONS, PLACES
+# Calibration of the time model on Pat's recorded outdoor rides (moving time / model time at the ride's average Stages power, calm air,
+# rho 1.27 (about 4 C), 4 s per sharp turn): 21 Nov 1.043 (60.4 km, 145 W), 22 Nov: see TIME_CAL_RIDES. The factor covers corners, towns,
+# traffic, the Stages offset and his real CdA; re-fit it with calibrate_time() after new long rides (mean of TIME_CAL_RIDES).
+TIME_CAL_RIDES = {'2026-11-21': 1.043, '2026-11-22': 1.049}     # 60.4 km at 144.7 W / 86.5 km at 131.3 W (moving-mean power, Edge files)
+TIME_FACTOR = 1.046
+
+
+def route_time(path_or_route, P, wind_kmh=0.0, wind_from=0.0, vmax=42.0, corner_s=4.0, factor=None, rho=1.27, **phys):
+    """Moving-time estimate (s) for a route at constant pedal power P (W, Stages scale): physics per 20 m step (cp_lib.speed_from_power with the
+    step's grade and the wind component; speed capped at vmax on descents) + corner_s per sharp turn, times the calibration factor
+    (default TIME_FACTOR). wind_from in degrees (90 = east). Returns dict(sec, km, kmh, at_km(km) -> seconds, T (cumulative s), s (m))."""
+    import cp_lib as cp
+    r = analyse(path_or_route) if isinstance(path_or_route, str) else path_or_route
+    s, e, b = r['s'], r['rel'], r['b']; f = TIME_FACTOR if factor is None else factor; T = [0.0]; t = 0.0
+    for i in range(len(s) - 1):
+        ds = s[i + 1] - s[i]; gr = (e[i + 1] - e[i]) / ds if ds > 0 else 0.0
+        head = wind_kmh * math.cos(math.radians(b[i] - wind_from))
+        v = min(cp.speed_from_power(P, gr, head, rho=rho, **phys), vmax); t += ds / (v / 3.6); T.append(t)
+    T = (np.array(T) + corner_s * np.searchsorted([k * 1000 for k, _ in r['turns']], s)) * f
+    sec = float(T[-1]); km = r['km']
+    return dict(sec=sec, km=km, kmh=km / sec * 3600, T=T, s=s, at_km=lambda k: float(np.interp(k * 1000, s, T)), factor=f)
+
+
+def calibrate_time(path, avg_w, moving_s, **kw):
+    """Calibration factor of the time model from a recorded ride: actual moving time / model time at the ride's average power (factor 1)."""
+    return moving_s / route_time(path, avg_w, factor=1.0, **kw)['sec']
+
+
+def _xy(la, lo, lat0=50.8):
+    return la * 111195.0, lo * 111195.0 * math.cos(math.radians(lat0))
+
+
+def route_overlap(path_a, others, thr_m=40.0):
+    """Share of route A (by 20 m steps) within thr_m of each route in `others` (paths), best first, plus the stretches of A on none of them.
+    Returns (list of (share, name, km), covered_share, [(km_from, km_to), ...] new stretches >= 1 km)."""
+    A = analyse(path_a) if isinstance(path_a, str) else path_a; ya, xa = _xy(A['rla'], A['rlo']); res = []; cov = np.zeros(len(ya), bool)
+    for f in others:
+        try: B = analyse(f)
+        except Exception: continue
+        yb, xb = _xy(B['rla'], B['rlo']); m = np.zeros(len(ya), bool)
+        for i in range(0, len(ya), 300):
+            m[i:i + 300] = (np.sqrt((ya[i:i + 300, None] - yb[None, :]) ** 2 + (xa[i:i + 300, None] - xb[None, :]) ** 2).min(1) < thr_m)
+        res.append((float(m.mean()), os.path.basename(f), B['km'])); cov |= m
+    res.sort(key=lambda x: -x[0]); s = A['s'] / 1000; new = []; i = 0
+    while i < len(cov):
+        if not cov[i]:
+            j = i
+            while j < len(cov) and not cov[j]: j += 1
+            if s[min(j, len(s) - 1)] - s[i] >= 1.0: new.append((round(float(s[i]), 1), round(float(s[min(j, len(s) - 1)]), 1)))
+            i = j
+        else: i += 1
+    return res, float(cov.mean()), new
+
+
+def shortcuts(path_or_route, early=(12, 38), late=(42, 62), at=(15, 18, 20, 22, 25, 28, 30)):
+    """Cut options of a loop: for route km k in `at` (inside `early`), the nearest point of the later part (`late`, km) by straight line.
+    Returns [(k, km_later, gap_km, skipped_km)]: riding the gap (roads permitting) skips skipped_km. Check the roads on a map."""
+    r = analyse(path_or_route) if isinstance(path_or_route, str) else path_or_route; s = r['s'] / 1000; y, x = _xy(r['rla'], r['rlo'])
+    A = np.where((s >= early[0]) & (s <= early[1]))[0]; B = np.where((s >= late[0]) & (s <= late[1]))[0]; out = []
+    if not len(A) or not len(B): return out
+    D = np.sqrt((y[A, None] - y[None, B]) ** 2 + (x[A, None] - x[None, B]) ** 2) / 1000
+    for k in at:
+        ia = int(np.argmin(abs(s[A] - k))); jb = int(np.argmin(D[ia])); out.append((k, float(s[B][jb]), float(D[ia, jb]), float(s[B][jb] - k - D[ia, jb])))
+    return out
+
+
+def near_places(path_or_route, places, max_m=1500.0):
+    """Route km and distance off the route of named places {name: (lat, lon)} (e.g. refill stops from a map search). Returns
+    [(name, km, metres)] sorted by km; places further than max_m are left out."""
+    r = analyse(path_or_route) if isinstance(path_or_route, str) else path_or_route; out = []
+    for n, (a, b) in places.items():
+        d = hav(r['rla'], r['rlo'], a, b); i = int(np.argmin(d))
+        if d[i] <= max_m: out.append((n, float(r['s'][i] / 1000), float(d[i])))
+    return sorted(out, key=lambda x: x[1])
+
 if __name__ == '__main__':
     import sys
     args = sys.argv[1:]
     if args[:1] == ['--compare'] and len(args) == 3: compare_routes(args[1], args[2])
     elif args[:1] == ['--diag'] and len(args) == 2: print(elevation_diag(args[1]))
     elif args[:1] == ['--entry'] and len(args) >= 2: print(route_entry_md(args[2] if len(args) > 2 else 'C?', args[1]))
+    elif args[:1] == ['--time'] and len(args) >= 2:
+        P = float(args[2]) if len(args) > 2 else 120.0; rt_ = route_time(args[1], P)
+        print('%s: %.1f km at %.0f W -> %d:%02d h moving (%.1f km/h; factor %.3f)' % (os.path.basename(args[1]), rt_['km'], P, rt_['sec'] // 3600, rt_['sec'] % 3600 // 60, rt_['kmh'], rt_['factor']))
     else:
         for f in sorted(glob.glob(os.path.join(args[0] if args else 'gpx', '*.gpx'))):
             r = analyse(f)

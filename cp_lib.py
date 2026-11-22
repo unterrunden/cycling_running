@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""cp_lib.py (v1.14, 2026-11-17) - reusable helpers for the 'cycling | running' coaching project.
+"""cp_lib.py (v1.16, 2026-11-22) - reusable helpers for the 'cycling | running' coaching project.
 
 Companion to analysis_tools.py (activity files -> reports / digest) and routes_tool.py (GPX route geometry).
 This module collects everything else that was written ad hoc during the chats:
   PHYSICS    power <-> speed <-> wind model, critical-power sketches
   SUN        sunrise / sunset (NOAA approximation, DST-aware)
-  PATCH      safe text patcher for the markdown files (every edit asserts that its target exists)
+  PATCH      safe text patcher for the markdown files (every edit asserts that its target exists); v1.16: doc_token_check for doc rewrites
   FIT        inspection of FIT files: structure, laps, timer events, pauses, HRV / strap quality
   RIDE       10-min block tables, best windows (power, HR, distance, speed), decoupling, HR by power, effort finder
   RUN        splits, halves, tail paces, fastest windows (reps), HR plateaus / steps / zone time, loop length
@@ -13,7 +13,9 @@ This module collects everything else that was written ad hoc during the chats:
              Friel run zones, VDOT / Riegel paces, time-trial report (LTHR estimate)
   TESTS      4DP / Full Frontal report (sprints with a physics check, blocks, gaps, strap quality)
   W' / CP    W' balance (Skiba integral and differential), W' needed by a ride, power-duration fits (2P CP, Morton 3P)
-  CSV/DIGEST Strava activities.csv loader, weekly table, bests table, history_digest.md generator
+  METRICS    1 Hz sessions, HR cleaning, TSS / rTSS, intensity shares, aerobic decoupling, EF, 1-min HR recovery, CTL/ATL/TSB, HR model,
+             HCI (HR consistency index) and the 0-100 score scale (used by digest_tool.py)
+  CSV/DIGEST Strava activities.csv loader, weekly table, bests table, history_digest.md generator (v1; digest_tool.py writes the v2 digest)
 Needs numpy; pandas (CSV/DIGEST); scipy (PHYSICS); fitparse (FIT; pip install fitparse --break-system-packages).
 Usage:  import cp_lib as cp ; cp.speed_from_power(185, 0.004) ; python3 cp_lib.py --index   (prints the function index)
 Conventions (see coach_notes.md): 'elapsed-based' = Strava power-curve convention (stopped/paused seconds count as 0 W);
@@ -162,6 +164,18 @@ def normalize_md(src, dst=None):
     text = "\n".join(out) + "\n"
     if dst: open(dst, "w", encoding="utf-8").write(text)
     return text
+
+
+def doc_token_check(old, new, show=True):
+    """Safety net for a doc rewrite (v1.16, from the 21 Nov coach-notes restructure): every number token (e.g. 175.1, 16:38, 3:41, 21059503183)
+    and every [Pat ...] / [Strava ...] / [mine ...] tag of the old text that no longer appears in the new one. old / new = path or text.
+    Returns dict(numbers=[...], tags=[...]); each item must be a deliberate update, otherwise restore it."""
+    rd = lambda x: open(x, encoding="utf-8").read() if os.path.exists(str(x)) and "\n" not in str(x) else str(x)
+    o, n = rd(old), rd(new); num = lambda t: set(re.findall(r"\d+(?:[.,:]\d+)*", t))
+    tag = lambda t: collections.Counter(re.findall(r"\[(?:Pat|Strava|mine)[^\]]*\]", t))
+    miss = sorted(num(o) - num(n), key=lambda x: (len(x), x)); to, tn = tag(o), tag(n); mt = sorted(k for k in to if to[k] > tn[k])
+    if show: print("numbers gone (%d): %s\ntags fewer (%d): %s" % (len(miss), miss, len(mt), mt))
+    return dict(numbers=miss, tags=mt)
 
 
 # ----------------------------------------------------------------------------- FIT
@@ -1118,6 +1132,300 @@ def pd_fit(bests, model="2p", lo=120, hi=900, cp=None):
         W = np.linalg.lstsq((1 / t[m])[:, None], p[m] - cp, rcond=None)[0][0]; return dict(cp=float(cp), wprime=float(W), pmax=None)
     c, W = np.linalg.lstsq(np.vstack([t[m], np.ones(m.sum())]).T, p[m] * t[m], rcond=None)[0]
     return dict(cp=float(c), wprime=float(W), pmax=None)
+
+
+# ----------------------------------------------------------------------------- METRICS
+# Session metrics for the history digest (v1.15, 20 Nov 2026). A session is a dict x of 1 Hz arrays: t, P (W; 0 when not recorded), H (bpm),
+# C (rpm), D (m), V (m/s), mov (bool: moving; indoor = recording with power or speed). Build one with session_1hz(). Rules in coach_notes.md.
+FTP_MONTH = {"2026-08": 170.0, "2026-09": 170.0, "2026-10": 170.0, "2026-11": 175.0}   # load-metric FTP by month (Pat 20 Nov: 165/170/175; Sep raised to 170:
+                                                                                       # 22 Sep held 170.0 W for 60 min, stops excluded); later months: CFG['ftp']
+RUN_THR_PACE = 300.0                                                                   # s/km, run threshold pace for rTSS (intervals.icu 5:00/km) until a run test
+EASY_FRAC, TEMPO_FRAC = 0.77, 0.90                                                     # intensity shares: easy <= 77% FTP (easy cap), tempo 77-90%, threshold+ > 90%
+RIDE_Z3, RIDE_Z5, RUN_Z3, RUN_Z5 = 149, 178, 164, 188                                  # HR zone floors used by HRR (cycling / running zones)
+HR_PAR = dict(t_on=20.0, t_off=60.0, t_slow=900.0, clip=1.3)                           # HR model kinetics (grid search 20 Nov, rides and runs)
+
+
+def ftp_for(day):
+    """FTP used for load metrics on a date 'YYYY-MM-DD' (FTP_MONTH, else CFG['ftp'])."""
+    return FTP_MONTH.get(str(day)[:7], CFG["ftp"])
+
+
+def roll(x, w):
+    """Trailing w-sample mean (NaN for the first w-1 samples); NaN inputs count as 0."""
+    x = np.nan_to_num(np.asarray(x, float)); c = np.cumsum(np.concatenate([[0], x])); out = np.full(len(x), np.nan)
+    if len(x) >= w: out[w - 1:] = (c[w:] - c[:-w]) / w
+    return out
+
+
+def norm_power(p):
+    """Normalized Power: 4th-power mean of the 30-s rolling mean (Coggan). Pass the moving samples (coasting kept)."""
+    r = roll(p, 30); r = r[np.isfinite(r)]
+    return float(np.mean(r ** 4) ** 0.25) if len(r) else np.nan
+
+
+def session_1hz(path, kind):
+    """1 Hz session dict from a FIT/GPX/TCX file. kind 'ride' (outdoor: moving = speed >= 1 m/s), 'vride' (indoor: power > 0 or speed >= 1)
+    or 'run' (run_1hz: stops removed by its pause rule). P is 0 W while the timer was not recording (elapsed-based curves)."""
+    if kind == "run":
+        r = run_1hz(path); n = r["n"]; a, ex = _at().load_any(path)
+        return dict(t=r["T"].astype(float), P=np.full(n, np.nan), H=np.asarray(r["H"], float), C=np.full(n, np.nan), D=r["D"], V=r["V"], mov=~r["stop"],
+                    lat=a[:1, 1], lon=a[:1, 2])
+    a, ex, tl = load_activity(path); n = len(tl["rec"])
+    P = np.where(tl["rec"], np.nan_to_num(tl["P"]), 0.0); S = np.nan_to_num(tl["S"])
+    mov = tl["rec"] & (((P > 0) | (S >= 1.0)) if kind == "vride" else (S >= 1.0))
+    ok = np.isfinite(a[:, 1])
+    return dict(t=np.arange(n, dtype=float), P=P, H=np.asarray(tl["H"], float), C=np.asarray(tl["C"], float), D=np.asarray(tl["D"], float), V=S, mov=mov,
+                lat=a[ok, 1][:1] if ok.any() else np.array([np.nan]), lon=a[ok, 2][:1] if ok.any() else np.array([np.nan]))
+
+
+def stream_run_1hz(t, d, hr, gap_s=30, min_d=0.0, min_hr=100):
+    """1 Hz run session from a reduced Strava stream (time s, distance m, HR): linear interpolation; gaps > gap_s = stopped; HR before min_d
+    metres or below min_hr = invalid (strap not yet working)."""
+    t, d, hr = (np.asarray(v, float) for v in (t, d, hr)); T = np.arange(int(t[-1]) + 1); D = np.interp(T, t, d); H = np.interp(T, t, hr)
+    H[(D < min_d) | (H < min_hr)] = np.nan; gap = np.zeros(len(T), bool)
+    for a, b in zip(t[:-1], t[1:]):
+        if b - a > gap_s: gap[int(a):int(b)] = True
+    n = len(T); V = np.full(n, np.nan); V[15:n - 15] = (D[30:] - D[:n - 30]) / 30
+    return dict(t=T.astype(float), P=np.full(n, np.nan), H=H, C=np.full(n, np.nan), D=D, V=V, mov=~gap, lat=np.array([np.nan]), lon=np.array([np.nan]))
+
+
+def clean_hr(x, kind, manual=(), jump_bpm=15.0):
+    """HR with strap artefacts blanked: manual minute ranges [(from, to)], hr_artefact_scan hits (+-1 min, rides) and 1-2 s jumps of more than
+    jump_bpm (+-10 s). Returns (H, ranges, share of moving seconds blanked or missing). The second, model-based pass is hr_resid_clean()."""
+    H = np.asarray(x["H"], float).copy(); H[H < 40] = np.nan; n = len(H); bad = list(manual)
+    if kind != "run": bad += [(a - 1, b + 1) for a, b, k in hr_artefact_scan(dict(P=x["P"], H=H, S=np.where(x["mov"], 2.0, 0.0)))]
+    d = np.abs(np.diff(H, prepend=H[0])); d2 = np.abs(H - np.roll(H, 2))
+    for j in np.where((d > jump_bpm) | (d2 > jump_bpm))[0]:
+        if 5 < j < n - 5: H[max(0, j - 10):j + 10] = np.nan
+    for a, b in bad: H[int(max(0, a) * 60):int(min(n / 60, b) * 60)] = np.nan
+    m = x["mov"]; return H, bad, (float(1 - np.isfinite(H[m]).mean()) if m.any() else 1.0)
+
+
+def ride_load(x, ftp):
+    """Ride load over the moving samples: sec, km, avg_w, np_w, IF, TSS (sec x NP x IF / (FTP x 3600) x 100), VI, easy / tempo / thr+ shares (% of
+    moving time at <= 77%, 77-90%, > 90% FTP; coasting counts as easy) and mean cadence (pedalling only)."""
+    m = x["mov"]; P = x["P"][m]; sec = int(m.sum())
+    if sec < 120 or not np.nanmax(np.nan_to_num(P), initial=0) > 0: return dict(sec=sec)
+    NP = norm_power(P); IF = NP / ftp; avg = float(np.mean(P)); C = x["C"][m]; ped = np.nan_to_num(C) > 0
+    D = x["D"]; km = float(np.nanmax(D) / 1000) if np.isfinite(D).any() and np.nanmax(D) > 0 else np.nan
+    return dict(sec=sec, km=km, avg_w=avg, np_w=NP, IF=IF, tss=sec * NP * IF / (ftp * 3600) * 100, vi=NP / avg if avg > 0 else np.nan,
+                easy_pct=float(np.mean(P <= EASY_FRAC * ftp) * 100), z3_pct=float(np.mean((P > EASY_FRAC * ftp) & (P <= TEMPO_FRAC * ftp)) * 100),
+                z4_pct=float(np.mean(P > TEMPO_FRAC * ftp) * 100), cad=float(np.mean(C[ped])) if ped.any() else np.nan)
+
+
+def run_load(x, thr=None):
+    """Run load: sec, km, pace and normalised pace (s/km; 30-s speed, 4th-power mean, no grade adjustment), IF = normalised speed / threshold speed,
+    rTSS = h x IF^2 x 100 (threshold pace RUN_THR_PACE)."""
+    thr = thr or RUN_THR_PACE; m = x["mov"]; sec = int(m.sum()); V = np.nan_to_num(x["V"])[m]
+    if sec < 120: return dict(sec=sec)
+    ns = float(np.mean(np.clip(roll(V, 30)[29:], 0, None) ** 4) ** 0.25); IF = ns / (1000 / thr); dist = float(np.nanmax(x["D"]) - np.nanmin(x["D"]))
+    return dict(sec=sec, km=dist / 1000, pace=sec / dist * 1000, ns_pace=1000 / ns, IF=IF, tss=sec / 3600 * IF ** 2 * 100)
+
+
+def hr_stats(x):
+    """Moving HR: mean, max and highest 30-s mean (needs >= 50% valid samples)."""
+    m = x["mov"]; H = x["H"][m]; ok = np.isfinite(H)
+    if not m.any() or ok.mean() < 0.5: return dict(hr_avg=np.nan, hr_max=np.nan, hr30=np.nan, hr_cover=float(ok.mean()) if m.any() else 0.0)
+    Hn = x["H"]; r30 = roll(np.where(np.isfinite(Hn), Hn, 0), 30) / np.maximum(roll(np.isfinite(Hn).astype(float), 30), 1e-9)
+    r30[roll(np.isfinite(Hn).astype(float), 30) < 0.9] = np.nan
+    return dict(hr_avg=float(np.nanmean(H)), hr_max=float(np.nanmax(H)), hr30=float(np.nanmax(r30)), hr_cover=float(ok.mean()))
+
+
+def aero_decoupling(x, kind, ftp=None):
+    """Aerobic decoupling (%): efficiency (ride NP / HR, run speed / HR) of the first half over the second half, minus 1, on the moving part without
+    the start (ride 10 min, run 5) and the end (ride 5 min, run 2); halves by moving time. Best = closest to 0. Flags: 'u' = under 20 min usable
+    (runs 15) or under 85% valid HR (no value); 'i' = intervals / hard (30-s power > 105% FTP for > 5% of the time, IF > 0.90, or half NPs
+    differing > 8%); 's' = short (under 40 min usable, runs 30). Meant for long easy rides; computed for all."""
+    skip, tail, need = (300, 120, 900) if kind == "run" else (600, 300, 1200)
+    m = np.where(x["mov"])[0]
+    if len(m) < skip + tail + need: return dict(dec=np.nan, dec_flag="u")
+    m = m[skip:len(m) - tail]; h1, h2 = m[:len(m) // 2], m[len(m) // 2:]; H = x["H"]
+    if np.isfinite(H[m]).mean() < 0.85: return dict(dec=np.nan, dec_flag="u")
+    if kind == "run": e = lambda idx: np.nanmean(np.nan_to_num(x["V"])[idx]) / np.nanmean(H[idx])
+    else: e = lambda idx: norm_power(x["P"][idx]) / np.nanmean(H[idx])
+    dec = (e(h1) / e(h2) - 1) * 100; flag = ""
+    if kind != "run":
+        P = x["P"][m]; hard = np.mean(roll(P, 30)[29:] > 1.05 * ftp); n1, n2 = norm_power(x["P"][h1]), norm_power(x["P"][h2])
+        if norm_power(P) / ftp > 0.90 or hard > 0.05 or abs(n1 / n2 - 1) > 0.08: flag = "i"
+    if flag == "" and len(m) < (1800 if kind == "run" else 2400): flag = "s"
+    return dict(dec=float(dec), dec_flag=flag)
+
+
+def efficiency_factor(x, kind):
+    """EF: ride NP / mean HR (W per bpm); run mean speed in m/min / mean HR. Needs >= 85% valid HR and (rides) power."""
+    m = x["mov"]; H = x["H"][m]
+    if not m.any() or np.isfinite(H).mean() < 0.85: return np.nan
+    if kind == "run": return float(np.nanmean(np.nan_to_num(x["V"])[m]) * 60 / np.nanmean(H))
+    P = x["P"][m]
+    return float(norm_power(P) / np.nanmean(H)) if np.nanmax(np.nan_to_num(P), initial=0) > 0 else np.nan
+
+
+def hrr_events(x, kind, ftp=None, sep_s=90):
+    """1-min HR recoveries [(t_end, hr_peak, drop, 'mod'|'max')]. Effort end: 20-s mean >= 90% FTP (ride) or pace <= 5:30/km (run); the next
+    60 s must be a recovery (ride: mean <= 65% FTP and every 10-s mean <= 75% FTP, i.e. rolling or standing; run: slower than 7:30/km).
+    Peak = max HR within -5..+15 s of the end; drop = peak - mean HR at peak +58..62 s; the 60 s after the peak must be smooth (>= 60 values,
+    1-s steps <= 6 bpm) and slow down (the last 20 s may not fall more than 2 bpm faster than the first 20 s). Counted from Z3 (ride 149, run 164); 'max' when the peak is in Z5 (ride 178, run 188). Efforts >= sep_s apart."""
+    H = x["H"]; n = len(H); out = []
+    if kind == "run": I = np.nan_to_num(x["V"]); hi = roll(I, 20) >= 1000 / 330; lowmax = 1000 / 450; z3, z5 = RUN_Z3, RUN_Z5
+    else: I = np.nan_to_num(x["P"]); hi = roll(I, 20) >= 0.90 * ftp; lowmax = 0.65 * ftp; z3, z5 = RIDE_Z3, RIDE_Z5
+    last = -10 ** 9; t = 20
+    while t < n - 80:
+        if hi[t] and not hi[t + 1]:
+            nxt = I[t + 1:t + 61]
+            rec = np.nanmean(nxt) <= lowmax if kind == "run" else (np.mean(nxt) <= lowmax and np.nanmax(roll(nxt, 10)) <= 0.75 * ftp)
+            if rec and t - last > sep_s:
+                w = H[max(0, t - 5):t + 16]
+                if np.isfinite(w).sum() >= 15:
+                    pk = max(0, t - 5) + int(np.nanargmax(w)); hp = H[pk]; seg = H[pk:pk + 66]; f = seg[np.isfinite(seg)]
+                    smooth = len(f) >= 62 and np.max(np.abs(np.diff(f))) <= 6
+                    if smooth:                       # a real recovery slows down: the last 20 s may not fall faster than the first 20 s
+                        q = lambda i: np.nanmean(H[pk + i - 2:pk + i + 3]) if i else hp
+                        smooth = (q(40) - q(60)) <= (q(0) - q(20)) + 2
+                    if pk + 60 < n and smooth and hp >= z3:
+                        out.append((t, float(hp), float(hp - np.nanmean(H[pk + 58:pk + 63])), "max" if hp >= z5 else "mod")); last = t
+        t += 1
+    return out
+
+
+def pmc(daily, start, end, ctl_days=42, atl_days=7):
+    """Performance-management chart from {date: TSS}: CTL (42-d) and ATL (7-d) exponential averages, TSB = yesterday's CTL - ATL (form going into
+    the day). Starts at 0 on `start`. Returns a DataFrame(date, tss, ctl, atl, tsb)."""
+    import pandas as pd
+    ctl = atl = 0.0; rows = []
+    for d in pd.date_range(start, end, freq="D"):
+        k = d.strftime("%Y-%m-%d"); t = daily.get(k, 0.0); tsb = ctl - atl
+        ctl += (t - ctl) / ctl_days; atl += (t - atl) / atl_days; rows.append(dict(date=k, tss=t, ctl=ctl, atl=atl, tsb=tsb))
+    return pd.DataFrame(rows)
+
+
+# --- HR model (used by the HCI and the second HR-cleaning pass)
+def lowpass(I, tau):
+    """First-order lag (time constant tau s); NaN counts as 0."""
+    a = 1.0 / tau; y = np.empty(len(I)); acc = I[0] if len(I) and np.isfinite(I[0]) else 0.0
+    for i, v in enumerate(I):
+        acc += a * ((0.0 if not np.isfinite(v) else v) - acc); y[i] = acc
+    return y
+
+
+def lowpass2(I, t_on, t_off):
+    """Asymmetric lag: rises with t_on, falls with t_off (HR comes up faster than it settles)."""
+    y = np.empty(len(I)); acc = 0.0
+    for i, v in enumerate(I):
+        acc += (v - acc) / (t_on if v > acc else t_off); y[i] = acc
+    return y
+
+
+def hr_intensity(x, kind, ftp=None, thr=None):
+    """Model input I: power / FTP (rides) or speed / threshold speed (runs), clipped to 0..1.3, 0 while stopped."""
+    thr = thr or RUN_THR_PACE
+    I = np.nan_to_num(x["V"]) / (1000 / thr) if kind == "run" else np.nan_to_num(x["P"]) / ftp
+    return np.where(x["mov"], np.clip(I, 0, HR_PAR["clip"]), 0.0)
+
+
+def hr_features(I, par=None):
+    """(fast, slow) model features: lowpass2(I; t_on, t_off) and lowpass(I; t_slow)."""
+    p = par or HR_PAR; I = np.minimum(I, p["clip"]); return lowpass2(I, p["t_on"], p["t_off"]), lowpass(I, p["t_slow"])
+
+
+def hr_model_fit(sessions, min_s=600):
+    """Pooled within-session fit of HR = b_s + k1 fast + k2 slow + d t_min over the usable samples (s['ok']) of sessions with >= min_s of them.
+    sessions: dicts with H, f1, f2, t (min), ok. Returns coef (k1, k2, d)."""
+    use = [s for s in sessions if s["ok"].sum() >= min_s]
+    X = np.vstack([np.column_stack([s["f1"][s["ok"]], s["f2"][s["ok"]], s["t"][s["ok"]]]) for s in use])
+    y = np.concatenate([s["H"][s["ok"]] for s in use]); g = np.concatenate([np.full(s["ok"].sum(), i) for i, s in enumerate(use)])
+    for i in range(len(use)):
+        k = g == i; X[k] -= X[k].mean(0); y[k] -= y[k].mean()
+    return np.linalg.lstsq(X, y, rcond=None)[0]
+
+
+def _pad(mask, k):
+    return np.convolve(mask.astype(float), np.ones(2 * k + 1), "same") > 0 if k > 0 and mask.any() else mask
+
+
+def hr_model_sessions(items, skip_s=300, neg_thr=30.0, pos_thr=40.0):
+    """Fit the HR model to [(key, kind, x, H_clean, ftp)] of one sport and blank strap dropouts with it (second cleaning pass: HR more than
+    neg_thr below the model (+-30 s) or more than pos_thr above it (+-10 s)). The first skip_s seconds are not used (HR rising from rest, dry strap).
+    Returns (coef, {key: dict(H, pred0, b, rmse, n_ok, resid_blank, ok)}); pred0 = model without the session offset b."""
+    S = []
+    for key, kind, x, H, ftp in items:
+        I = hr_intensity(x, kind, ftp); f1, f2 = hr_features(I); ok = np.isfinite(H) & x["mov"]; ok[:skip_s] = False
+        S.append(dict(key=key, H=H.copy(), f1=f1, f2=f2, ok=ok, t=np.arange(len(H)) / 60.0, n_mov=max(1, int(x["mov"].sum())), mov=x["mov"]))
+    coef = hr_model_fit(S)
+    for s in S:
+        o = s["ok"]; s["resid_blank"] = 0.0
+        if o.sum() < 120: continue
+        pred0 = coef[0] * s["f1"] + coef[1] * s["f2"] + coef[2] * s["t"]; r = s["H"] - pred0 - np.nanmedian((s["H"] - pred0)[o])
+        bad = _pad(np.nan_to_num(r) < -neg_thr, 30) | _pad(np.nan_to_num(r) > pos_thr, 10)
+        s["resid_blank"] = float((bad & np.isfinite(s["H"]) & s["mov"]).sum()) / s["n_mov"]; s["H"][bad] = np.nan; s["ok"] = o & ~bad
+    coef = hr_model_fit(S); out = {}
+    for s in S:
+        o = s["ok"]; pred0 = coef[0] * s["f1"] + coef[1] * s["f2"] + coef[2] * s["t"]; good = o.sum() >= 120
+        b = float(np.mean(s["H"][o] - pred0[o])) if good else np.nan
+        out[s["key"]] = dict(H=s["H"], pred0=pred0, b=b, rmse=float(np.sqrt(np.mean((s["H"][o] - pred0[o] - b) ** 2))) if good else np.nan,
+                             n_ok=int(o.sum()), resid_blank=s["resid_blank"], ok=o)
+    return coef, out
+
+
+# --- HCI (HR consistency index, 0-100)
+HCI_ANCHORS = ((0, 15), (2.5, 30), (10, 55), (25, 67), (50, 75), (75, 82), (90, 88), (97.5, 93), (100, 97))   # goodness percentile -> score
+HCI_W = dict(L=0.45, R=0.35, Z=0.20)
+HCI_PRIOR = dict(ill=3.0, alt_per_km=2.0, home_alt=65.0)     # [Claude] priors until the data can estimate them: illness +3 bpm, +2 bpm per 1000 m
+HCI_RPE_W = 0.5                                              # RPE counts with half its fitted weight (Pat: a small factor / cross-check)
+HCI_MIN = dict(score_s=120, ok_s=300, max_blank=0.30)        # no score under 2 usable min; 'u' under 5 min or > 30% HR blanked
+
+
+def hci_context(f, coef, rpe_coef, run_rpe_shift=0.0):
+    """Expected HR offset (bpm) from the factors of one session, relative to the reference (18 C, outdoors or new fan, feel 5, ATL 35, RPE as
+    expected for its IF and duration). f: mapping with temp, fancat (out/newfan/oldfan/nofan), feel, atl, rpe, IF, dur (min), alt_m, ill, kind.
+    coef: fitted (shrunk) coefficients by name; rpe_coef (a, b_IF, c_lnh). Returns (total, parts)."""
+    g = lambda k, d=np.nan: f[k] if k in f and f[k] is not None and not (isinstance(f[k], float) and np.isnan(f[k])) else d
+    rpe, IF, dur = g("rpe"), g("IF"), g("dur")
+    rpe_dev = (rpe - (rpe_coef[0] + rpe_coef[1] * IF + rpe_coef[2] * np.log(dur / 60)) - run_rpe_shift) if np.isfinite(rpe) and np.isfinite(IF) and np.isfinite(dur) else 0.0
+    t = g("temp"); fc = g("fancat", "out")
+    parts = dict(temp=coef["t_c"] * (t - 18) if np.isfinite(t) else 0.0, fan=coef["nofan"] * (fc == "nofan") + coef["oldfan"] * (fc == "oldfan"),
+                 feel=coef["feel_d"] * (g("feel", 5) - 5), fatigue=coef["atl_d"] * (g("atl", 35) - 35), rpe=HCI_RPE_W * coef["rpe_dev"] * rpe_dev,
+                 alt=HCI_PRIOR["alt_per_km"] * max(0.0, (g("alt_m", HCI_PRIOR["home_alt"]) - HCI_PRIOR["home_alt"]) / 1000), ill=HCI_PRIOR["ill"] * g("ill", 0.0))
+    return float(sum(parts.values())), parts
+
+
+def hci_zone_credit(H, Hp, edges):
+    """Share of samples whose HR zone equals the zone of the predicted HR (adjacent zone = half credit). edges = zone boundaries (bpm)."""
+    zh, zp = np.searchsorted(edges, H), np.searchsorted(edges, Hp); d = np.abs(zh - zp)
+    return float(np.mean(np.where(d == 0, 1.0, np.where(d == 1, 0.5, 0.0)))) if len(d) else np.nan
+
+
+def hci_badness(L, R, Z, scales):
+    """Composite badness: 0.45 |level| + 0.35 dynamics + 0.20 zone mismatch, each divided by its median over the reference sessions (1 = typical)."""
+    return HCI_W["L"] * np.abs(L) / scales["L"] + HCI_W["R"] * R / scales["R"] + HCI_W["Z"] * (1 - Z) / scales["Z"]
+
+
+def hci_percentile(D, ref):
+    """Goodness percentile of a badness value against the sorted reference badness values (mid-rank plotting positions, linear in between;
+    beyond the reference range it moves linearly towards 100 at badness 0 or 0 at 1.5 x the worst)."""
+    ref = np.sort(np.asarray(ref, float)); n = len(ref); pos = 100 * (n - 0.5 - np.arange(n)) / n
+    if D < ref[0]: return float(pos[0] + (100 - pos[0]) * min(1, (ref[0] - D) / ref[0]))
+    if D > ref[-1]: return float(pos[-1] * max(0.0, 1 - (D - ref[-1]) / (0.5 * ref[-1])))
+    return float(np.interp(D, ref, pos))
+
+
+def scale_score(pct):
+    """Pat's 0-100 scale from a goodness percentile (median 75, P10 55, P90 88, P97.5 93; HCI_ANCHORS)."""
+    a = np.array(HCI_ANCHORS, float); return float(np.interp(pct, a[:, 0], a[:, 1]))
+
+
+def value_percentile(v, ref, higher_better=True):
+    """Goodness percentile of a raw value (EF, HRR, |decoupling|) within reference values (mid-rank, linear in between, clamped 0-100)."""
+    ref = np.sort(np.asarray([r for r in ref if np.isfinite(r)], float)); n = len(ref)
+    if not n or not np.isfinite(v): return np.nan
+    pos = 100 * (np.arange(n) + 0.5) / n; p = float(np.interp(v, ref, pos, left=0.0, right=100.0))
+    return p if higher_better else 100 - p
+
+
+def lookup_rows(values, higher_better=True, step=5):
+    """Value at every `step`-th goodness percentile (5..95) of a metric, for the digest's score lookup table."""
+    v = np.asarray([x for x in values if np.isfinite(x)], float)
+    if not len(v): return {}
+    return {p: float(np.percentile(v, p if higher_better else 100 - p)) for p in range(step, 100, step)}
 
 
 # ----------------------------------------------------------------------------- CSV / DIGEST

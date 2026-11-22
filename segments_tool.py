@@ -1,4 +1,4 @@
-"""segments_tool.py - Strava segments: reference geometry, effort archive and PR fingerprinting (v1.4, 2026-11-12).
+"""segments_tool.py - Strava segments: reference geometry, effort archive and PR fingerprinting (v1.5, 2026-11-22).
 
 Strava's connector has no segment tool and the bulk export has no segment efforts, so this rebuilds them from the ride files:
   1. segments.json holds each segment's metadata (Pat's Strava values) and a 25-point reference line along its course. The line was taken from
@@ -6,7 +6,10 @@ Strava's connector has no segment tool and the bulk export has no segment effort
   2. find_efforts() scans every ride for passes: a start crossing (within 40 m), the next end crossing 0.8-1.3 x the length later, the course
      within 40 m of every reference point, in the right order (out-and-back passes are rejected). Validated against Strava's own efforts on
      27 Sep: time within 0-3 s, power within about 1 W, HR within 0.2 bpm.
-  3. build_archive() -> one row per effort; only real efforts are tracked (elapsed-based power >= 80% of the PR power, see is_tracked);
+  3. build_archive() -> one row per effort; only real efforts are tracked (track_flags, v1.5 [Pat 22 Nov]: elapsed-based power >= 80% of the
+     PR power AND >= 70% of his ability at that duration (segments.json 'capability', his best power curve) AND >= 90% of FTP; efforts without
+     power by time against the fastest tracked powered effort; segments marked 'track': false are counted only); archive_md() lists at most
+     'max_listed' tracked efforts per segment (the fastest plus the 'keep_worst' slowest of them);
      HR is checked for strap artefacts (hr_flag) and blanked for rides Pat marked unusable (segments.json 'hr_unusable');
      archive_md() -> markdown tables for the segments.md Project doc. Thresholds live in segments.json ('tracking', 'hr_check').
 
@@ -16,6 +19,7 @@ the stop as 0 W, i.e. its segment power equals the elapsed-based `w_el` (31 Oct 
 w_el 148 W), and the stop flag shows w_el. Time is elapsed. Power is on the Stages scale (left-only meter).
 Usage:
     python3 segments_tool.py                       # newest strava_export_*.zip + tests/*.fit -> segments_archive.csv, prints markdown
+    st.on_route('route.gpx')                       # v1.5: tracked segments along a planned route, with direction
     import segments_tool as st; acts = st.load_rides(); st.fingerprint(acts, km=1.56, time_s=221, w=248, cad=88, hr=183, hrmax=189)
 New segment: take its PR values from Strava, run fingerprint(), check the best candidate (score near 0-3, distance and climb plausible),
 then add_segment() and save_segments(). Segments without power/HR on the PR ride need `dalt` and a check of the effort count.
@@ -203,7 +207,8 @@ def _local(ts):
 
 
 # ----------------------------------------------------------------------------- ARCHIVE
-DEFAULTS = dict(tracking=dict(min_rel_power=0.80, time_factor_climb=1.25, time_factor_flat=1.08, climb_grade_pct=3.0),
+DEFAULTS = dict(tracking=dict(min_rel_power=0.80, time_factor_climb=1.25, time_factor_flat=1.08, climb_grade_pct=3.0,
+                              min_cap_frac=0.70, min_ftp_frac=0.90, ftp=175.0, max_listed=10, keep_worst=2),
                 hr_check=dict(min_w=200.0, min_s=30.0, end_hr=145.0, long_s=120.0, avg_hr_long=140.0, drop_bpm=5.0,
                               mod_w=150.0, mod_s=120.0, mod_end_hr=135.0, min_cov=0.8))
 
@@ -251,6 +256,55 @@ def is_tracked(e, pr, grade_pct, cfg=None):
     return e["time_s"] <= f * pr["time_s"]
 
 
+def capability(data, t):
+    """Pat's ability at duration t (s): his best power curve (segments.json 'capability': [[s, W], ...], outdoor and indoor Stages bests),
+    interpolated in log time; NaN without a curve."""
+    pts = (data.get("capability") or {}).get("points")
+    if not pts: return np.nan
+    xs = np.log([p[0] for p in pts]); ys = np.array([p[1] for p in pts], float)
+    return float(np.interp(np.log(min(max(t, pts[0][0]), pts[-1][0])), xs, ys))
+
+
+def track_flags(ef, seg, data):
+    """v1.5 tracking [Pat 22 Nov: only efforts near what he can do are kept; counts stay complete]. A powered effort is tracked when its
+    elapsed-based power is >= min_rel_power x the PR effort's power (is_tracked), >= min_cap_frac x capability(time) and >= min_ftp_frac x
+    FTP (so long Z2 passes on 6-13 min segments drop out). Efforts without power: time <= time_factor x the fastest TRACKED powered effort;
+    if the segment has powered efforts but none tracked, only no-power efforts faster than all of them; if it has no powered effort at
+    all, time against the PR (the old rule). seg['track'] False: nothing tracked. Returns a list of bools (one per effort)."""
+    c = _cfg(data, "tracking")
+    if seg.get("track") is False or not ef: return [False] * len(ef)
+    pr = min(ef, key=lambda x: x["time_s"]); out = []
+    pw = [e for e in ef if np.isfinite(e.get("w_el", np.nan))]
+    f = c["time_factor_climb"] if (seg.get("grade_pct") or 0) >= c["climb_grade_pct"] else c["time_factor_flat"]
+    pr_w = pr["w"] if np.isfinite(pr.get("w", np.nan)) else (max(pw, key=lambda x: x["w_el"])["w"] if pw else np.nan)
+    def real(e):
+        cap = capability(data, e["time_s"]); ok = e["w_el"] >= c["min_rel_power"] * pr_w if np.isfinite(pr_w) else True
+        if np.isfinite(cap): ok = ok and e["w_el"] >= c["min_cap_frac"] * cap
+        return ok and e["w_el"] >= c["min_ftp_frac"] * c["ftp"]
+    flags = {id(e): real(e) for e in pw}
+    tracked_pw = [e for e in pw if flags[id(e)]]
+    for e in ef:
+        if id(e) in flags: out.append(flags[id(e)]); continue
+        if tracked_pw: out.append(e["time_s"] <= f * min(x["time_s"] for x in tracked_pw))
+        elif pw: out.append(e["time_s"] < min(x["time_s"] for x in pw))
+        else: out.append(e["time_s"] <= f * pr["time_s"])
+    return out
+
+
+def on_route(path, data=None, tol_m=45.0):
+    """Tracked segments (with a reference line) that lie on a planned route (GPX or ride FIT): [(km_start, name, 'fwd' | 'rev')], every
+    reference point within tol_m of the route; 'rev' = the route runs the segment backwards (no effort possible). For pre-ride notes."""
+    import routes_tool as rt
+    data = data or load_segments(); r = rt.analyse(path); la, lo, s = r["rla"], r["rlo"], r["s"] / 1000; out = []
+    for sg in data["segments"]:
+        ref = sg.get("ref")
+        if not ref: continue
+        idx, dm = [], []
+        for x, y in zip(ref["lat"], ref["lon"]):
+            d = hav(la, lo, x, y); i = int(np.argmin(d)); idx.append(i); dm.append(float(d[i]))
+        if max(dm) < tol_m: out.append((round(float(s[idx[0]]), 1), sg["name"], "fwd" if s[idx[-1]] > s[idx[0]] else "rev"))
+    return sorted(out)
+
 def build_archive(acts=None, data=None, show=True):
     """One row per effort for every attempted segment, with `tracked` (see is_tracked) and HR checks. Columns: id, name, date, start,
     time_s, km, kmh, w (moving, as Strava), w_el (elapsed-based), wkg, cad, hr, hrmax, hr_end, dalt, gain, stopped_s, rank (by time),
@@ -261,8 +315,8 @@ def build_archive(acts=None, data=None, show=True):
         if not s.get("ref"): continue
         ef = find_efforts(acts, s["ref"])
         if not ef: continue
-        pr = min(ef, key=lambda x: x["time_s"])
-        for e in ef:
+        pr = min(ef, key=lambda x: x["time_s"]); tf = track_flags(ef, s, data)
+        for e, trk in zip(ef, tf):
             fl = []; un = hr_unusable(data, e)
             if un: fl.append(un); e["hr"] = e["hrmax"] = e["hr_end"] = np.nan
             else:
@@ -274,7 +328,8 @@ def build_archive(acts=None, data=None, show=True):
             rows.append(dict(id=s["id"], name=s["name"], date=e["start"].strftime("%Y-%m-%d"), start=e["start"].strftime("%H:%M"),
                              time_s=e["time_s"], km=e["km"], kmh=e["km"] / e["time_s"] * 3600, w=e["w"], w_el=e["w_el"], wkg=e["w"] / RIDER_KG,
                              cad=e["cad"], hr=e["hr"], hrmax=e["hrmax"], hr_end=e["hr_end"], dalt=e["dalt"], gain=e["gain"], stopped_s=e["stopped_s"],
-                             rel_w=e["w_el"] / pr["w"] if np.isfinite(pr["w"]) else np.nan, tracked=is_tracked(e, pr, s.get("grade_pct"), tc),
+                             rel_w=e["w_el"] / pr["w"] if np.isfinite(pr["w"]) else np.nan, tracked=trk,
+                             cap_w=capability(data, e["time_s"]), rel_cap=e["w_el"] / capability(data, e["time_s"]) if np.isfinite(e["w_el"]) else np.nan,
                              flags=", ".join(fl), strava_efforts=(s.get("strava_pr") or {}).get("efforts"), key=e["key"]))
     df = pd.DataFrame(rows)
     if len(df):
@@ -296,36 +351,53 @@ def _mmss(s):
 
 
 def archive_md(df, data=None, asof=""):
-    """Markdown for segments.md: overview table (all efforts found / tracked / Strava count) + one table per segment with the tracked
-    efforts only (newest first)."""
-    data = data or load_segments(); segs = {s["id"]: s for s in data["segments"]}; L = []
+    """Markdown for segments.md (v1.5): overview table of the attempted segments (Strava's effort count, tracked count, best tracked power and
+    its share of his ability at that duration), one table per segment with tracked efforts (newest first; at most 'max_listed': the fastest
+    plus the 'keep_worst' slowest), and a table of attempted segments without a tracked effort yet (their best effort)."""
+    data = data or load_segments(); segs = {s["id"]: s for s in data["segments"]}; L = []; c = _cfg(data, "tracking")
     tr = df[df["tracked"]] if "tracked" in df else df
-    L.append("| ID | Segment | Place | km | Gain m | Grade % | Strava PR | Efforts found / Strava | Tracked | Best W (tracked) |")
-    L.append("|---|---|---|---|---|---|---|---|---|---|")
+    pct = lambda v: "%.0f%%" % (v * 100) if isinstance(v, (int, float, np.floating)) and np.isfinite(v) else "-"
+    L.append("| ID | Segment | Place | km | Gain m | Grade % | Strava PR | Efforts | Tracked | Best tracked W | Best vs ability |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|---|")
+    none = []
     for sid, s in segs.items():
         if s["status"] != "attempted": continue
-        g = df[df.id == sid]; t = tr[tr.id == sid]; pr = s.get("strava_pr") or {}
-        L.append("| [%d](https://www.strava.com/segments/%d) | %s | %s | %.2f | %s | %s | %s | %d / %s | %d | %s |" % (
-            sid, sid, s["name"], s["place"], s["km"], s.get("gain_m", "-"), s.get("grade_pct", "-"), _mmss(pr.get("time_s", 0)),
-            len(g), pr.get("efforts", "-"), len(t), _f(t["w"].max()) if len(t) and t["w"].notna().any() else "-"))
+        g = df[df.id == sid]; t = tr[tr.id == sid]; pr = s.get("strava_pr") or {}; n_st = pr.get("efforts")
+        eff = ("%s" % n_st) if n_st is not None and n_st == len(g) else ("%s (found %d)" % (n_st if n_st is not None else "-", len(g)))
+        bt = t.loc[t["w"].idxmax()] if len(t) and t["w"].notna().any() else None
+        L.append("| [%d](https://www.strava.com/segments/%d) | %s | %s | %.2f | %s | %s | %s%s | %s | %d | %s | %s |" % (
+            sid, sid, s["name"], s["place"], s["km"], s.get("gain_m", "-") if s.get("gain_m") is not None else "0 (?)", s.get("grade_pct", "-"),
+            _mmss(pr.get("time_s", 0)), " (%s.%s.)" % (pr["date"][8:10], pr["date"][5:7]) if pr.get("date") else "", eff, len(t),
+            _f(bt["w"]) if bt is not None else "-", pct(bt["rel_cap"]) if bt is not None else "-"))
+        if not len(t) and len(g): none.append((s, g))
     for sid, s in segs.items():
-        g = tr[tr.id == sid].sort_values(["date", "start"], ascending=False)
+        g = tr[tr.id == sid].sort_values("time_s")
         if not len(g): continue
-        hidden = int((df.id == sid).sum() - len(g))
-        L.append(""); L.append("### %s (%d), %.2f km, %s m, %s %%%s" % (s["name"], sid, s["km"], s.get("gain_m", "-"), s.get("grade_pct", "-"), " - " + s["note"] if s.get("note") else ""))
-        L.append("| Date | Time | Rank | km/h | W | W/kg | % of PR W | Cad | HR avg/max | Notes |"); L.append("|---|---|---|---|---|---|---|---|---|---|")
+        nmax, kw = int(c["max_listed"]), int(c["keep_worst"]); cut = 0
+        if len(g) > nmax: cut = len(g) - nmax; g = pd.concat([g.iloc[:nmax - kw], g.iloc[len(g) - kw:]])
+        g = g.sort_values(["date", "start"], ascending=False)
+        hidden = int((df.id == sid).sum() - len(g) - cut)
+        L.append(""); L.append("### %s (%d), %.2f km, %s m, %s %%%s" % (s["name"], sid, s["km"], s.get("gain_m", "-") if s.get("gain_m") is not None else "0 (?)", s.get("grade_pct", "-"), " - " + s["note"] if s.get("note") else ""))
+        L.append("| Date | Time | Rank | km/h | W | W/kg | % of PR W | % of ability | Cad | HR avg/max | Notes |"); L.append("|---|---|---|---|---|---|---|---|---|---|---|")
         for _, r in g.iterrows():
-            L.append("| %s %s | %s | %d | %.1f | %s | %s | %s | %s | %s/%s | %s |" % (r["date"], r["start"], _mmss(r["time_s"]), r["rank"], r["kmh"], _f(r["w"]),
-                     _f(r["wkg"], "%.2f"), _f(r["rel_w"] * 100) if np.isfinite(r["rel_w"]) else "-", _f(r["cad"]), _f(r["hr"]), _f(r["hrmax"]),
+            L.append("| %s %s | %s | %d | %.1f | %s | %s | %s | %s | %s | %s/%s | %s |" % (r["date"], r["start"], _mmss(r["time_s"]), r["rank"], r["kmh"], _f(r["w"]),
+                     _f(r["wkg"], "%.2f"), _f(r["rel_w"] * 100) if np.isfinite(r["rel_w"]) else "-", pct(r["rel_cap"]), _f(r["cad"]), _f(r["hr"]), _f(r["hrmax"]),
                      r["flags"] if isinstance(r["flags"], str) else ""))
+        if cut: L.append("%d more tracked effort(s) between the fastest %d and the slowest %d not listed." % (cut, nmax - kw, kw))
         if hidden: L.append("%d more effort(s) below the tracking threshold not listed." % hidden)
+    if none:
+        L.append(""); L.append("### Attempted, no tracked effort yet (every effort below the threshold, or counted only)")
+        L.append("| Segment | Efforts | Best effort | W | % of ability | Note |"); L.append("|---|---|---|---|---|---|")
+        for s, g in none:
+            b = g.loc[g["time_s"].idxmin()]
+            L.append("| %s (%d) | %d | %s %s (%s) | %s | %s | %s |" % (s["name"], s["id"], len(g), b["date"], b["start"], _mmss(b["time_s"]), _f(b["w_el"]),
+                     pct(b["rel_cap"]), "counted only (Pat)" if s.get("track") is False else (s.get("note") or "")))
     return "\n".join(L)
-
 
 if __name__ == "__main__":
     acts = load_rides()
     df = build_archive(acts)
     out = os.path.join(HERE, "segments_archive.csv"); t = df[df["tracked"]]
-    t.drop(columns=["key", "tracked"]).round(1).assign(wkg=t["wkg"].round(2), rel_w=t["rel_w"].round(3)).to_csv(out, index=False)
+    t.drop(columns=["key", "tracked"]).round(1).assign(wkg=t["wkg"].round(2), rel_w=t["rel_w"].round(3), rel_cap=t["rel_cap"].round(3)).to_csv(out, index=False)
     print("written", out, len(t), "tracked efforts of", len(df))
     print(archive_md(df))
