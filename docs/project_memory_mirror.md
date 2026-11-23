@@ -1,4 +1,4 @@
-# Project memory mirror: Pat, cycling | running (22 Nov 2026, chat 4)
+# Project memory mirror: Pat, cycling | running (23 Nov 2026, chat 4)
 
 Fuller record of everything Pat has stated (facts, wishes, decisions), kept next to the compact Project memory files (topics/cycling.md, running.md, schedule.md, preferences.md). It began as a fallback when memory writes were blocked; since about 7 Nov the memory saves again, and [Pat 11 Nov] this file stays as the detailed, dated record (Markdown holds more than the memory files). Only Pat's statements go here; analyses belong in coach_notes.md.
 
@@ -270,6 +270,7 @@ aliases: [cycling training, power meter, FTP, 4DP, indoor trainer]
 - 100 km on Sun 29 Nov is fine; all weekends are possible but Sunday is preferred over Saturday; the final 4DP ideally on a Sunday, Sun 20 Dec looks like a good fit, possibly outdoors if the weather allows for direct comparability; tests indoors from then on
 - First 100 km route: komoot "century" (tour 3379567079), his current plan for the first 100 km ride; he may adjust it slightly
 - 22 Nov (23:53): revised century route (file attached; also meant for the repo's routes zip): the waypoints reversed, now home via the Rösberg descent, so the refill comes a good chunk earlier, in Düren; if Claude does not agree with the refill logic, the route can be tweaked again
+- 23 Nov (09:43): the revised route is the same komoot tour (3379567079), only with changed waypoints; he made further changes (file attached, komoot's own export) and will update GitHub after this update; drop the 'v2' label and treat it as just the main century route (older versions can be mentioned in the description)
 
 ### Week 2 changes (18-21 Nov)
 - 18 Nov plan: likely rides today (Wed 18) and runs tomorrow (Thu 19), when there is a period without significant rain (temperature fine, but strong winds make it feel quite a bit colder); plan C: Thu as a rest day and Fri as the run day (or a ride day, but little time on Friday), followed by the longer outdoor easy rides on the weekend
@@ -283,6 +284,7 @@ aliases: [cycling training, power meter, FTP, 4DP, indoor trainer]
 ### Week 3 (23-29 Nov)
 - 22 Nov (23:53): the Tue 24 run is very likely (no school that day, so convenient); he confirms in the evening; treat it as given unless he updates
 - 22 Nov (23:53): Sat 28 likely outdoors, as a final reconnaissance ahead of the century; treat it as given unless he says otherwise before (slightly less certain than the Tuesday run, but still most likely)
+- Mon 23 Nov (morning): legs feeling just fine
 
 ### Side plan and toolkit
 - 15 Nov: considering light home strength and mobility training on the side (every couple of days or daily; beginner-friendly, household items, no gym, brief; to support weight gain and cycling); logged only lightly, not part of the main plan; asked for Claude's view and some exercises
