@@ -1,6 +1,6 @@
 # Plan weeks 1-4 (9 Nov - 6 Dec 2026), as of 24 Nov (chat 4)
 
-Planning FTP 175 W (both scales). Stages zero offset: weekly indoors (first indoor ride of the week) and before every check, test and outdoor ride. Easy riding: KICKR 120-130 W (cap 140), Stages 115-125 W (cap 135), 85-90 rpm. Steady state: week 2 158-164 W (90-94%), weeks 3-4 161-168 W (92-96%). Fan: level 2 for checks and intervals (from 17 Nov), level 3 for tests of 10 min or more, level 1 for easy rides. Run HR zones from 17 Nov: Z1 <=149, Z2 150-163, Z3 164-172, Z4 173-187, Z5 >=188 (LTHR 181). Weeks 1-2 are done; week 3 is concrete (replanned 22 Nov, swapped 24 Nov: rest on Mon 23, the 10-min test on Tue 24, the run on Wed 25, the 1 x 15 on Thu 26, rest on Fri 27, the outdoor reconnaissance on Sat 28, the 100 km on the C27 century on Sun 29 from 11:00-11:30); week 4 is a sketch, tweaked before it starts. Run days are provisional (best-forecast weekday, guard windows in coach_notes.md section 7).
+Planning FTP 175 W (both scales). Stages zero offset: weekly indoors (first indoor ride of the week) and before every check, test and outdoor ride. Easy riding: KICKR 120-130 W (cap 140), Stages 115-125 W (cap 135), 85-90 rpm. Steady state: week 2 158-164 W (90-94%), weeks 3-4 161-168 W (92-96%). Fan: level 2 for checks and intervals (from 17 Nov), level 3 for tests of 10 min or more, level 1 for easy rides. Run HR zones from 17 Nov: Z1 <=149, Z2 150-163, Z3 164-172, Z4 173-187, Z5 >=188 (LTHR 181). Weeks 1-2 are done; week 3 is concrete (replanned 22 Nov, swapped 24 Nov: rest on Mon 23 and Tue 24, the run on Wed 25, the 10-min test on Thu 26, a transition spin on Fri 27, the outdoor reconnaissance on Sat 28, the 100 km on the C27 century on Sun 29 from 11:00-11:30); week 4 is a sketch, tweaked before it starts. Run days are provisional (best-forecast weekday, guard windows in coach_notes.md section 7).
 
 | Week | Date | Session | Where | Duration | Targets | Checks | Status |
 |---|---|---|---|---|---|---|---|
@@ -18,12 +18,12 @@ Planning FTP 175 W (both scales). Stages zero offset: weekly indoors (first indo
 | 2 | Fri 20.11. | Short ride with sprints (planned easy; no run this week: rain); badminton later | indoor, fan level 1 | 35 min | planned KICKR 110-130 W with 3-4 sprints of 8-12 s; ridden: 5 s 631 W, 3 min at about 212 W, 30 s 449.0 W, 1 min 344.7 W (Stages) | MyWhoosh crashed before the last effort (Garmin copy kept) | done |
 | 2 | Sat 21.11. | Outdoor ride (swapped back: the shorter weekend ride; planned Z2) | outdoor (C29, komoot 3401385578); 14:20-17:04 | 60.4 km, 2:26 h moving (2:44 elapsed) | Stages 145 W, NP 157 W, IF 0.90, TSS 197 (planned Z2 115-125 W, cap 135) | HR 146 / 178 (strap artefact after the long stop); fuel about 31 g/h; finished 25 min after sunset | done |
 | 2 | Sun 22.11. | Long ride (week-2 rehearsal for the 100 km) | outdoor, C30 v2 (komoot 3402107035); 12:57-17:17 | 86.5 km, 3:36 h moving, 4:21 h elapsed (29 stops, 44 min) | Stages 131 W, NP 143 W, IF 0.82, TSS 241 (planned 115-125 W, cap 135); No10 revers 75 s at 263 W, Metternich Climb 94 s at 236 W | HR 140 / 183, decoupling -4.1% (no drift), first vs last hour NP/HR 1.04 / 1.05; about 160 g carbohydrate (37 g/h), about 1.35 l; finished 39 min after sunset (lights) | done |
-| 3 | Mon 23.11. | Rest | - | - | - | - | planned |
-| 3 | Tue 24.11. | 10-min all-out + Z2 (moved from Thu; replaces the 2 x 10) | indoor, fan 1 (warm-up) / 3 (test) / 1 (Z2); resistance or dynamic mode with gradient feel 0% (no ERG); Stages zero offset | 60-75 min | warm-up 20 min with 2 x 1 min at about 185 W; 10 min: 192-195 W in min 0-1, 195-200 W to min 5 (+3-5 W if RPE <= 7), hold, all out in the last 2 min; then Z2 KICKR 120-130 W (cap 140) | test: go/no-go, both FITs, RPE at 3 / 6 / 9 min, room temperature | planned |
-| 3 | Wed 25.11. | Run, 6 laps U1 (moved from Tue) | outdoor, Schlosspark (the warmest weekday by the forecast) | about 7.6 km, 46 min | 6:00-6:10 /km; HR recorded only | long-run check (legs at 24 h and 48 h) | planned |
-| 3 | Thu 26.11. | 1 x 15 min steady state (moved from Fri); school sports first (light) | indoor, fan 1 (warm-up) / 2 (interval) | 60 min | 15 min at 161-165 W (92-94%); Z2 KICKR 120-130 W (cap 140) around it | interval log; legs at 24 h after the run | planned |
-| 3 | Fri 27.11. | Rest (badminton light) | - | - | - | - | planned |
-| 3 | Sat 28.11. | Easy outdoor spin: reconnaissance of the century finale (given unless Pat updates) | outdoor: C27 km 80-100 (up the Ville, the new roads at km 85-88, the Knallgas runter descent, Bonn-Brühler-Straße) plus the shortest way there; back by about 16:10 (sunset 16:33), lights on | 60-75 min (about 25-35 km) | Stages 115-125 W (cap 135), climbs up to about 150 W, Edge alert 140 W; no efforts, no segments | Stages zero offset after about 10 min; note anything on the route (surface, leaves, roadworks) | planned |
+| 3 | Mon 23.11. | Rest | - | - | - | - | done |
+| 3 | Tue 24.11. | Rest (unplanned: the bike was not on the trainer; the test moved to Thu) | - | - | - | - | done |
+| 3 | Wed 25.11. | Run, 6 laps U1 (moved from Tue) | outdoor, Schlosspark (the warmest weekday by the forecast) | about 7.6 km, 46 min | 6:00-6:10 /km (6:05-6:15 is fine), HR recorded only; 5 laps if anything hurts | long-run check (legs on Thu morning = the test go/no-go, and at 48 h) | planned |
+| 3 | Thu 26.11. | 10-min all-out + Z2 (back on Thu; replaces the 2 x 10 and this week's 1 x 15) | indoor, fan 1 (warm-up) / 3 (test) / 1 (Z2); resistance or dynamic mode with gradient feel 0% (no ERG); Stages zero offset | 60-75 min | warm-up 20 min with 2 x 1 min at about 185 W; 10 min: 195-198 W in min 0-1, 198-203 W to min 5 (+3-5 W if RPE <= 7), hold, all out in the last 2 min; then Z2 KICKR 120-130 W (cap 140) | test: go/no-go (incl. legs after the run), both FITs, RPE at 3 / 6 / 9 min, room temperature | planned |
+| 3 | Fri 27.11. | Transition spin (Pat 24 Nov: short, no intensity); badminton light | indoor, fan level 1 (the bike stays on the trainer until Sat morning) | 30-40 min | KICKR 120-130 W (cap 140) (110-125 W is fine), 85-95 rpm, seated, no efforts | - | planned |
+| 3 | Sat 28.11. | Easy outdoor spin: reconnaissance of the century finale (given unless Pat updates) | outdoor (bike off the trainer Sat morning, with his dad): C27 km 80-100 (up the Ville, the new roads at km 85-88, the Knallgas runter descent, Bonn-Brühler-Straße) plus the shortest way there; back by about 16:10 (sunset 16:33), lights on | 60-75 min (about 25-35 km) | Stages 115-125 W (cap 135), climbs up to about 150 W, Edge alert 140 W; no efforts, no segments | Stages zero offset after about 10 min; note anything on the route (surface, leaves, roadworks) | planned |
 | 3 | Sun 29.11. | First 100 km (C27 century) | outdoor; start 11:00-11:30 (11:45 at the latest; sunset 16:32, finish by 16:47, at the latest 16:52) | 100.1 km, about 4:08-4:32 h moving (4:19 in the forecast ESE wind), about 4:25-4:50 h with 15-20 min of stops | Stages 115-125 W (cap 135) evenly, Edge alert 140 W, climbs up to about 150 W; no segment efforts; breakfast about 150 g carbohydrate 2-3 h before, then about 45-50 g/h on the bike from about 0:45 h | long-ride log; Stages zero offset after about 10 min; refill JET Düren-Rölsdorf (km 39.2); clock checks km 25 and the JET | planned |
 | 4 | Mon 30.11. | Rest (school sports possible) | - | - | - | - | sketch |
 | 4 | Tue 01.12. | Aerobic check #2 + 1 x 20 min | indoor, fan as on 17 Nov (1 for warm-up and 130 W, 2 from the 150 W block) | 80-95 min | check blocks as on 17 Nov; 20 min 161-168 W; Z2 | aerobic check #2; interval log | sketch |
@@ -149,59 +149,58 @@ Planning FTP 175 W (both scales). Stages zero offset: weekly indoors (first indo
 - Notes: Done [Pat 22 Nov]: start 12:57, so the finish (17:17) came 39 min after sunset and at civil dusk, rear light on throughout, front from 16:00. Pacing: 131 W average (planned 115-125), with real efforts on No10 revers (5 min in, 263 W), the Ville climb (Mount Phantasialand 164 W) and the Metternich climbs (236 / 191 W, 3:30 h in). Durability good: no HR drift (decoupling -4.1%), the last hour as efficient as the first. Stops: 29 of 20 s or more (44 min), the longest 9 min at km 31.6 (croissant) and about 9 min at the ED station (km 54.3, 15:28). Fuel about 160 g (45 + 30 g malto, a croissant, about 30 gummy bears, part of 10 g sugar) = about 37 g/h; drink about 1.35 l (not thirsty in the cold; a full bladder at the end). Long bib shorts as the first layer, joggers, long sleeve, jacket; hands cold, toes very cold; saddle pain after 20-30 min of continuous riding, relieved by standing.
 
 
-## Week 3 (about 7.5-8 h of riding + 46 min run)
+## Week 3 (about 7-7.5 h of riding + 46 min run)
 
-**Mon 23.11. Rest** (planned)
+**Mon 23.11. Rest** (done)
 
 - Goal: Recovery after the biggest week so far (TSS 689; TSB -41 going into Monday).
 - Where / duration: -; -.
 - Targets: -.
 - Feel: -.
-- Notes: Rest after the biggest week so far (689 TSS; CTL 49 -> 57 in a week). Run moved to Tue 24 by the run-day rule (on 24 Nov swapped again: the test on Tue, the run on Wed 25) (yr.no, 22 Nov 20:16: Tue 3.3 C at 15 h, Mon 2.4 C, Fri about 2 C; all dry; Tue ESE about 14 km/h).
+- Notes: Rest after the biggest week so far (689 TSS; CTL 49 -> 57 in a week). Run moved to Tue 24 by the run-day rule (on 24 Nov moved again: the run on Wed 25, the test on Thu 26) (yr.no, 22 Nov 20:16: Tue 3.3 C at 15 h, Mon 2.4 C, Fri about 2 C; all dry; Tue ESE about 14 km/h).
 
-**Tue 24.11. 10-min all-out + Z2 (moved from Thu; replaces the 2 x 10)** (planned)
+**Tue 24.11. Rest (unplanned: the bike was not on the trainer; the test moved to Thu)** (done)
 
-- Goal: Benchmark for the 10-min range (Pat 20 Nov); the steady-state stimulus of the week.
-- Where / duration: indoor, fan 1 (warm-up) / 3 (test) / 1 (Z2); resistance or dynamic mode with gradient feel 0% (no ERG); Stages zero offset; 60-75 min.
-- Targets: warm-up 20 min with 2 x 1 min at about 185 W; 10 min: 192-195 W in min 0-1, 195-200 W to min 5 (+3-5 W if RPE <= 7), hold, all out in the last 2 min; then Z2 KICKR 120-130 W (cap 140).
-- Feel: all-out, RPE 9-10.
-- Checks: test: go/no-go, both FITs, RPE at 3 / 6 / 9 min, room temperature.
-- Notes: [Pat 24 Nov 15:34] Swapped: no run today (cold; tight on time and daylight); the 10-min test today instead, the run Wed, the 1 x 15 Thu, Friday stays rest. Order [mine]: the test on the freshest day, the easy run between the two hard rides, the 1 x 15 two days after the test; Wed is also the warmest run day (3.6 C at 15 h, feels about +1 C). Form: TSB about -29 (his bests came at TSB -1 to -9; Thu would have been -14), so the plan is about 5 W lower than the protocol and the expectation about 195-205 W (outdoor 10-min best 202 W; 2P model 208 W fresh); a completed 10 min matters more than the number. Go/no-go: legs fine, no symptoms [Pat]. Setup: KICKR via MyWhoosh in resistance or dynamic mode on a course with some elevation, gradient feel 0%, no ERG, Edge trainer mode off; Edge with Stages + H9 over ANT+ (laps on); KICKR cable with slack; window and door closed; Do Not Disturb, audio set before, no app switching; 500 ml with 20-30 g malto. Warm-up 20 min (fan 1; zero offset at about min 8-10, then fan 3; 2 x 1 min at about 185 W, 2-3 min easy after each). 10 min (cadence 85-95): 192-195 W in min 0-1, 195-200 W to min 5, +3-5 W at min 5 if RPE <= 7, hold, all out from min 8; if he blows up, settle 5-10 W lower and finish. Then Z2 to 60-75 min (fan 1). Send both FITs, RPE at 3 / 6 / 9 min, room temperature at start and end.
-
-**Wed 25.11. Run, 6 laps U1 (moved from Tue)** (planned)
-
-- Goal: Long-run build (repeat of 6 laps: no run in week 2); easy legs between the two hard rides.
-- Where / duration: outdoor, Schlosspark (the warmest weekday by the forecast); about 7.6 km, 46 min.
-- Targets: 6:00-6:10 /km; HR recorded only.
-- Feel: conversational, RPE 3.
-- Checks: long-run check (legs at 24 h and 48 h).
-- Notes: Run day (moved from Tue): 6 laps of U1 at 6:00-6:10/km, RPE 3; if anything hurts beyond the usual, cut to 5 laps. Forecast (yr.no, 24 Nov 13:17 UTC): 3.6 C at 15 h, partly cloudy, dry, wind about 11 km/h (feels about +1 C). Sunset about 16:35: start early. Phone charged; Strava only. Session line and legs at 24 h (before the 1 x 15).
-
-**Thu 26.11. 1 x 15 min steady state (moved from Fri); school sports first (light)** (planned)
-
-- Goal: Steady-state step 2 (goal c), two days after the test.
-- Where / duration: indoor, fan 1 (warm-up) / 2 (interval); 60 min.
-- Targets: 15 min at 161-165 W (92-94%); Z2 KICKR 120-130 W (cap 140) around it.
-- Feel: RPE 6-7 at the end.
-- Checks: interval log; legs at 24 h after the run.
-- Notes: 1 x 15 two days after the test: 15 min at 161-165 W, the bottom of the step (TSB about -24); stop rule (power more than 5% below target for over a minute, or RPE above 8 before minute 10: ride on in Z2). Light school sports first are fine. Zero offset done on Tue (repeat only if the bike was moved). Interval log: W, cadence, RPE at the end, how much longer he could have held it.
-
-**Fri 27.11. Rest (badminton light)** (planned)
-
-- Goal: Recovery before the weekend (Pat: Friday stays the rest day).
+- Goal: Extra recovery after the 689-TSS week.
 - Where / duration: -; -.
 - Targets: -.
 - Feel: -.
-- Notes: Rest before the weekend [Pat 24 Nov: Friday stays the rest day]; badminton light. Evening: nothing special (Saturday evening is the bike and food preparation).
+- Notes: [Pat 24 Nov 22:40] Neither the test nor the run today: the bike was not back on the trainer, and he does not want to mount it alone (his dad helps). So an extra rest day: TSB about -29 going into today, about -18 into Wed. New order [Pat's pick; mine: agreed]: the run Wed, the 10-min test Thu, a short transition spin Fri, then Sat and Sun as planned; this week's 1 x 15 drops out (the 10-min all-out is the week's harder stimulus; steady state continues with the 1 x 20 on Tue 1 Dec).
+
+**Wed 25.11. Run, 6 laps U1 (moved from Tue)** (planned)
+
+- Goal: Long-run build (repeat of 6 laps: no run in week 2), easy, about 24 h before the test.
+- Where / duration: outdoor, Schlosspark (the warmest weekday by the forecast); about 7.6 km, 46 min.
+- Targets: 6:00-6:10 /km (6:05-6:15 is fine), HR recorded only; 5 laps if anything hurts.
+- Feel: conversational, RPE 3.
+- Checks: long-run check (legs on Thu morning = the test go/no-go, and at 48 h).
+- Notes: Run day (moved from Tue): 6 laps of U1 at 6:00-6:10/km (6:05-6:15 is fine), RPE 3; if anything hurts beyond the usual, cut to 5 laps. First run since 10 Nov and the day before the test: keep it truly easy (no fast last lap), flat, and early in the afternoon so about 24 h lie before the test. Forecast (yr.no, 24 Nov 13:17 UTC): 3.6 C at 15 h, partly cloudy, dry, wind about 11 km/h (feels about +1 C). Sunset about 16:35. Phone charged; Strava only. The bike goes back on the trainer today (Wed) with his dad [Pat 24 Nov], so it is ready for Thu and Fri; after the remount check that the KICKR power cable has slack and the rear wheel and shifting run cleanly (a minute of easy spinning through the gears).
+
+**Thu 26.11. 10-min all-out + Z2 (back on Thu; replaces the 2 x 10 and this week's 1 x 15)** (planned)
+
+- Goal: Benchmark for the 10-min range (Pat 20 Nov).
+- Where / duration: indoor, fan 1 (warm-up) / 3 (test) / 1 (Z2); resistance or dynamic mode with gradient feel 0% (no ERG); Stages zero offset; 60-75 min.
+- Targets: warm-up 20 min with 2 x 1 min at about 185 W; 10 min: 195-198 W in min 0-1, 198-203 W to min 5 (+3-5 W if RPE <= 7), hold, all out in the last 2 min; then Z2 KICKR 120-130 W (cap 140).
+- Feel: all-out, RPE 9-10.
+- Checks: test: go/no-go (incl. legs after the run), both FITs, RPE at 3 / 6 / 9 min, room temperature.
+- Notes: 10-min all-out, back on Thu. Form: TSB about -15 (the original Thu value was -14), so the full protocol pacing: 195-198 W in min 0-1, 198-203 W to min 5, +3-5 W at min 5 if RPE <= 7, hold, all out from min 8; expected about 200-208 W (outdoor 10-min best 202 W; 2P model 208 W fresh); if he blows up, settle 5-10 W lower and finish. Go/no-go: rested, resting HR at most about 52-53 if taken, legs fine, no symptoms; legs after Wednesday's run: soreness up to about 2/10 is fine; clearly more (calves or thighs heavy on the stairs) -> no test: 60 min Z2 with the 1 x 15 at 161-165 W instead, the 10 min moves to week 4 or after the plan. Light school sports first are fine; if they were hard, the same swap. Setup: KICKR via MyWhoosh in resistance or dynamic mode on a course with some elevation, gradient feel 0%, no ERG, Edge trainer mode off; Edge with Stages + H9 over ANT+ (laps on); KICKR cable with slack after the remount; window and door closed; Do Not Disturb, audio set before, no app switching; 500 ml with 20-30 g malto. Warm-up 20 min (fan 1; Stages zero offset at about min 8-10, then fan 3; 2 x 1 min at about 185 W, 2-3 min easy after each). Then Z2 to 60-75 min (fan 1). Send both FITs, RPE at 3 / 6 / 9 min, room temperature at start and end.
+
+**Fri 27.11. Transition spin (Pat 24 Nov: short, no intensity); badminton light** (planned)
+
+- Goal: Loose legs the day after the test; keeps the rhythm before the weekend.
+- Where / duration: indoor, fan level 1 (the bike stays on the trainer until Sat morning); 30-40 min.
+- Targets: KICKR 120-130 W (cap 140) (110-125 W is fine), 85-95 rpm, seated, no efforts.
+- Feel: very easy, RPE 2.
+- Notes: Transition spin [Pat 24 Nov: wants a small session so the extra rest day is not uncompensated, no length or intensity; mine: agreed]: 30-40 min easy, KICKR 110-130 W, 85-95 rpm, no efforts; costs about 2 TSB points for Sunday (about -9 instead of -7). Indoors (the bike stays on the trainer until Saturday morning [Pat 24 Nov]); fan level 1.
 
 **Sat 28.11. Easy outdoor spin: reconnaissance of the century finale (given unless Pat updates)** (planned)
 
 - Goal: Loosen the legs; check the new roads and the descent in daylight; bike, food and lights ready for Sunday.
-- Where / duration: outdoor: C27 km 80-100 (up the Ville, the new roads at km 85-88, the Knallgas runter descent, Bonn-Brühler-Straße) plus the shortest way there; back by about 16:10 (sunset 16:33), lights on; 60-75 min (about 25-35 km).
+- Where / duration: outdoor (bike off the trainer Sat morning, with his dad): C27 km 80-100 (up the Ville, the new roads at km 85-88, the Knallgas runter descent, Bonn-Brühler-Straße) plus the shortest way there; back by about 16:10 (sunset 16:33), lights on; 60-75 min (about 25-35 km).
 - Targets: Stages 115-125 W (cap 135), climbs up to about 150 W, Edge alert 140 W; no efforts, no segments.
 - Feel: very easy, RPE 2.
 - Checks: Stages zero offset after about 10 min; note anything on the route (surface, leaves, roadworks).
-- Notes: Day before the 100 km, outdoors [Pat 22 Nov: likely, a final reconnaissance; given unless he updates]: ride the finale of the century (km 80-100: up the Ville from Heimerzheim at km 80.3 (+4.3% over 500 m), the new roads at km 85-88, the Knallgas runter descent at km 88.4-89.9 (-7.2% over 500 m), the Bonn-Brühler-Straße with the roadworks he met on 21/22 Nov) at Stages 115-125 W, climbs up to about 150 W, Edge alert 140 W; no efforts, no segments. Back by about 16:10 (sunset 16:33), lights on. The bike is then already off the trainer for Sunday. Forecast (yr.no, 23 Nov): clear, -3 C at 07 h, about 2 C at 13 h, ESE about 10 km/h. In the evening: charge lights and Edge, pack food (malto in two pre-weighed bags for the refill, a croissant, gummies, money or card), check tyres; recheck the JET's Sunday hours.
+- Notes: Day before the 100 km, outdoors [Pat 22 Nov: likely, a final reconnaissance; given unless he updates]: ride the finale of the century (km 80-100: up the Ville from Heimerzheim at km 80.3 (+4.3% over 500 m), the new roads at km 85-88, the Knallgas runter descent at km 88.4-89.9 (-7.2% over 500 m), the Bonn-Brühler-Straße with the roadworks he met on 21/22 Nov) at Stages 115-125 W, climbs up to about 150 W, Edge alert 140 W; no efforts, no segments. Back by about 16:10 (sunset 16:33), lights on. Bike swap [Pat 24 Nov]: off the trainer on Saturday morning with his dad, before this ride, so the recon doubles as the shakedown before the century: before riding check the rear wheel (seated and tight), brakes (no rub) and shifting through all gears; tyre pressure; Stages zero offset after about 10 min outdoors; note anything odd and fix it Saturday, not Sunday morning. Forecast (yr.no, 23 Nov): clear, -3 C at 07 h, about 2 C at 13 h, ESE about 10 km/h. In the evening: charge lights and Edge, pack food (malto in two pre-weighed bags for the refill, a croissant, gummies, money or card), check tyres; recheck the JET's Sunday hours.
 
 **Sun 29.11. First 100 km (C27 century)** (planned)
 
@@ -218,6 +217,10 @@ Planning FTP 175 W (both scales). Stages zero offset: weekly indoors (first indo
 **Mon 30.11. Rest (school sports possible)** (sketch)
 
 - Goal: Recovery after the 100 km.
+- Where / duration: -; -.
+- Targets: -.
+- Feel: light.
+- Notes: Bike swap: back on the trainer on Mon 30 or Tue 1 Dec before the aerobic check (with his dad; week 4 is a trainer week); after the remount: KICKR cable slack, wheel, brakes and shifting checked, Stages zero offset in the warm-up on Tue.
 
 **Tue 01.12. Aerobic check #2 + 1 x 20 min** (sketch)
 
