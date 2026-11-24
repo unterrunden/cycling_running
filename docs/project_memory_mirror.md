@@ -1,4 +1,4 @@
-# Project memory mirror: Pat, cycling | running (23 Nov 2026, chat 4)
+# Project memory mirror: Pat, cycling | running (24 Nov 2026, chat 4)
 
 Fuller record of everything Pat has stated (facts, wishes, decisions), kept next to the compact Project memory files (topics/cycling.md, running.md, schedule.md, preferences.md). It began as a fallback when memory writes were blocked; since about 7 Nov the memory saves again, and [Pat 11 Nov] this file stays as the detailed, dated record (Markdown holds more than the memory files). Only Pat's statements go here; analyses belong in coach_notes.md.
 
@@ -285,6 +285,8 @@ aliases: [cycling training, power meter, FTP, 4DP, indoor trainer]
 - 22 Nov (23:53): the Tue 24 run is very likely (no school that day, so convenient); he confirms in the evening; treat it as given unless he updates
 - 22 Nov (23:53): Sat 28 likely outdoors, as a final reconnaissance ahead of the century; treat it as given unless he says otherwise before (slightly less certain than the Tuesday run, but still most likely)
 - Mon 23 Nov (morning): legs feeling just fine
+- 24 Nov (15:29): the run not done yet; quite cold, and timing would be tight (he could still go to the Schlosspark); asked whether the run could go on Thursday after both rides (the 10-min all-out today or tomorrow), with Friday as the normal rest day
+- 24 Nov (15:34): definitely wants to keep the 15-min steady state; fine with the test today (it matters less in the end: mostly an indicator, not too important for the main goals, but still a benchmark); legs feel fine, no fatigue symptoms anywhere (his view); keep Friday as the rest day; Claude decides the best order of the three sessions before the weekend
 
 ### Side plan and toolkit
 - 15 Nov: considering light home strength and mobility training on the side (every couple of days or daily; beginner-friendly, household items, no gym, brief; to support weight gain and cycling); logged only lightly, not part of the main plan; asked for Claude's view and some exercises
@@ -317,6 +319,7 @@ aliases: [cycling training, power meter, FTP, 4DP, indoor trainer]
 - 21 Nov: the 10 Nov run FIT is attached now; nothing committed to GitHub yet (he commits after this update); asked whether the new tests/ folder should hold only the four new files, or whether Claude still wants the older and KICKR files there (both fine)
 - 22 Nov: will upload the commit shortly (after answering the questions); 22 Nov (12:06): the two rides are in the new routes zip (all_routes_22_11.zip); he updates GitHub once Claude has these aspects in
 - 22 Nov (23:53): the docs/ files were missing from the commit (his mishap) and are added now, together with the revised century route
+- 24 Nov (15:47): wants the concrete changed files handed over individually (e.g. for the plans/ folder) rather than a zip, as he likes replacing each file separately; a full handover zip is fine for larger rewrites or updates, or before moving to a new chat; the md docs as single files are good, keep that up
 - 22 Nov (evening): the new Strava export attached (strava_export_22_11.zip); asked whether he should hand over all scripts from this chat again or whether Claude can traverse them itself (if so, add the new ones to the catalogue); Claude should look at analysis_tools.py and update it as well; this chat's finalisation with all the prior steps and file updates comes first, the GitHub commit (genuinely) after these steps; take all the time needed and ask for any input or missing info
 
 ### Chats and docs
