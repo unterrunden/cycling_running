@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""selfcheck.py - regression test of the coaching toolkit (analysis_tools.py, routes_tool.py, cp_lib.py, segments_tool.py, digest_tool.py).
+"""selfcheck.py - regression test of the coaching toolkit (analysis_tools.py, routes_tool.py, cp_lib.py, segments_tool.py, digest_tool.py; 2026-11-28).
 
 Run in a fresh chat after cloning the repo:   pip install fitparse scipy pandas --break-system-packages ; python3 selfcheck.py
 It reproduces numbers that were validated against Strava / the chats (20 Sep ride, 22 Sep hour, route geometry, C19 loop, 5K trial, 4DP ...),
@@ -311,6 +311,19 @@ def main():
               and len(b150) == 1 and abs(b150[0]["ref_w"] - 146.5) < 0.6,
               "start %.1f, HR %.1f / %.1f, 150 W block Stages %s" % (a[0]["start_min"], a[0]["other_hr_last"], a[1]["other_hr_last"], [round(x["ref_w"], 1) for x in b150]))
     guarded(check1_17_11)
+
+    def meters_26_11():
+        g, k = find("tests/26_11_garmin.fit"), find("tests/26_11_kickr.fit")
+        if not (g and k): return skip("meter_compare 26 Nov", "tests/26_11_*.fit not in the repo (optional)")
+        r = cp.meter_compare(g, k, windows=[(1210, 1810)], show=False); w = r["windows"][0]
+        check("meter_compare 26 Nov (v1.17): lag path through the MyWhoosh freezes (27 s in the 10-min all-out, about 222 s at the end); Stages 232.3 W, KICKR about 223.5 W",
+              abs(w["ref_w"] - 232.3) < 0.2 and 222.5 < w["other_w"] < 224.5 and r["lag"][1500] == 27 and abs(r["lag"][-1] - 222) <= 2,
+              "Stages %.1f, KICKR %.1f W, lag %d / %d s" % (w["ref_w"], w["other_w"], r["lag"][1500], r["lag"][-1]))
+        kk, f = cp.pd_power_law(600, 232.3, 3600, 175.1)
+        check("pd_power_law / pd_predict (v1.17): 10 / 60 min give k -0.158 and 20 min 208 W; CFG CP 185 / W' 28 kJ give 10 min 231.7 W",
+              abs(kk + 0.158) < 0.001 and abs(float(f(1200)) - 208.2) < 0.2 and abs(float(cp.pd_predict(600)) - 231.7) < 0.1,
+              "k %.3f, 20 min %.1f W, 2P 10 min %.1f W" % (kk, float(f(1200)), float(cp.pd_predict(600))))
+    guarded(meters_26_11)
 
     def wprime():
         f = find("tests/01_11.fit")

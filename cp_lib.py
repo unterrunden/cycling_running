@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""cp_lib.py (v1.16, 2026-11-22) - reusable helpers for the 'cycling | running' coaching project.
+"""cp_lib.py (v1.17, 2026-11-28) - reusable helpers for the 'cycling | running' coaching project.
 
 Companion to analysis_tools.py (activity files -> reports / digest) and routes_tool.py (GPX route geometry).
 This module collects everything else that was written ad hoc during the chats:
@@ -12,7 +12,9 @@ This module collects everything else that was written ad hoc during the chats:
   RUN ZONES  1 Hz run series, steady HR-pace windows, HR-pace model with day offsets, HR-zone scoring / fit against pace zones,
              Friel run zones, VDOT / Riegel paces, time-trial report (LTHR estimate)
   TESTS      4DP / Full Frontal report (sprints with a physics check, blocks, gaps, strap quality)
-  W' / CP    W' balance (Skiba integral and differential), W' needed by a ride, power-duration fits (2P CP, Morton 3P)
+  W' / CP    W' balance (Skiba integral and differential), W' needed by a ride, power-duration fits (2P CP, Morton 3P);
+             v1.17: CP separate from FTP (CFG cp / wprime / wprime_icu), pd_predict, pd_power_law
+  METERS     v1.17: align_monotone (lag path through MyWhoosh timer freezes) and meter_compare (KICKR vs Stages by band and window)
   METRICS    1 Hz sessions, HR cleaning, TSS / rTSS, intensity shares, aerobic decoupling, EF, 1-min HR recovery, CTL/ATL/TSB, HR model,
              HCI (HR consistency index) and the 0-100 score scale (used by digest_tool.py)
   CSV/DIGEST Strava activities.csv loader, weekly table, bests table, history_digest.md generator (v1; digest_tool.py writes the v2 digest)
@@ -30,7 +32,13 @@ CFG = dict(ftp=175.0,                                                 # planning
            z2cap=135.0, tz="Europe/Berlin", home=(50.8438, 6.8942), sun_site=(50.94, 6.96),
            mass=68.0, cda=0.38, crr=0.005, rho=1.22, eta=0.98,           # rider 56 kg (Pat 12 Nov, measured; 60 kg before) + bike 10.1 + kit ~2 = 68 kg (72 until v1.7); hoods, cool autumn air
            ride_hr_zones=(132, 148, 162, 177), run_hr_zones=(150, 164, 173, 188), run_lthr=181.0,   # cycling Z1-Z4 upper edges, inclusive (Pat 8 Nov; was 125/150/170/182); run zones as exclusive bounds (Z1 <150 ... Z5 >=188; Pat 17 Nov, was 130/160/175/190), run LTHR (17 Nov)
-           zone_edges=(0, .55, .75, .90, 1.05, 1.20, 1.50, 99))          # Coggan, as fractions of FTP
+           zone_edges=(0, .55, .75, .90, 1.05, 1.20, 1.50, 99),          # Coggan, as fractions of FTP
+           cp=185.0, wprime=28000.0,                                      # v1.17 (26 Nov, Stages scale): working 2P model for predictions 3-20 min. CP is NOT the FTP:
+                                                                          # studies put CP 3-6% above FTP (Karsten 2021: +7 W; 2021 IJES: +16 W); the 10-min all-out of
+                                                                          # 26 Nov (232.3 W) needs W' 28.4 kJ at CP 185. Until 26 Nov predictions used CP = FTP 175 / W' 20 kJ
+                                                                          # and forecast 208 W for that 10 min (-10%).
+           wprime_icu=24000.0)                                            # W' for intervals.icu, whose W'bal uses the FTP (175) as CP and the integral model: the 26 Nov
+                                                                          # 10 min needs 24.3 kJ there (wprime_needed(P, 175)['integral'])
 G = 9.81
 
 
@@ -88,6 +96,20 @@ def cp_fit(points):
 def cp_predict(cp, wprime, seconds):
     """Power (W) the critical-power sketch predicts for an effort of `seconds` (CP + W'/t)."""
     return cp + wprime / seconds
+
+
+def pd_predict(seconds, cp=None, wprime=None):
+    """Predicted all-out power (W) for `seconds` from the working 2P model (CFG cp / wprime, v1.17). Valid for about 3-20 min; it overshoots
+    beyond about 30 min (CP is not sustainable for an hour: 26 Nov values give 193 W for 60 min against the measured 175 W) and below 2 min."""
+    return cp_predict(CFG["cp"] if cp is None else cp, CFG["wprime"] if wprime is None else wprime, np.asarray(seconds, float))
+
+
+def pd_power_law(t1, p1, t2, p2):
+    """Power law P(t) = p1 * (t / t1) ** k through two best efforts (t in s). Returns (k, f) with f(t) the predicted power. Fits his whole
+    3-60 min range better than 2P (26 Nov: 10 min 232.3 W and 60 min 175.1 W give k = -0.158, i.e. 20 min 208 W, 30 min 195 W, 5 min 259 W;
+    a typical aerobic rider sits nearer k = -0.07 to -0.10: his curve is steep, the anaerobic-leaning profile)."""
+    k = math.log(p2 / p1) / math.log(t2 / t1)
+    return k, (lambda t: p1 * (np.asarray(t, float) / t1) ** k)
 
 
 # ----------------------------------------------------------------------------- SUN
@@ -942,6 +964,77 @@ def hr_zone_optimise(win, ftp, z1=133, grid=((140, 152), (152, 166), (166, 182))
     return dict(edges=best[1], balanced=best[0])
 
 
+# ----------------------------------------------------------------------------- METERS (v1.17)
+def align_monotone(ref_p, other_p, lag_range=(-300, 400), win=90, step=30, min_sd=3.0):
+    """Lag path that maps a second recording onto a reference: other index = ref index - lag. Lags are found per window (win s, every
+    step s) by correlating power, then a dynamic programme picks the best path whose lag never decreases (a MyWhoosh timer freeze only
+    ever adds lag; lesson 19). Windows with flat power (SD < min_sd) count as neutral. Returns an int array (one lag per ref second).
+    26 Nov: 0-6 s in the warm-up, 19 s by min 17.5, 27 s through the 10-min all-out, 29 s at its end, 222 s after the app switches."""
+    from numpy.lib.stride_tricks import sliding_window_view as swv
+    a = np.nan_to_num(np.asarray(ref_p, float)); b = np.nan_to_num(np.asarray(other_p, float)); n = len(a)
+    lags = np.arange(lag_range[0], lag_range[1]); starts = np.arange(0, max(1, n - win), step)
+    pad = lag_range[1] + 1; bp = np.concatenate([np.full(pad, np.nan), b, np.full(abs(lag_range[0]) + n, np.nan)])
+    W = swv(bp, win); S = np.zeros((len(starts), len(lags)))
+    for si, lo in enumerate(starts):
+        x = a[lo:lo + win]
+        if x.std() < min_sd: continue
+        Y = W[lo - lags + pad]                                   # rows: other[lo - L : lo - L + win] for each lag L
+        ok = np.isfinite(Y).all(axis=1); Yc = Y[ok] - Y[ok].mean(axis=1, keepdims=True); sd = Yc.std(axis=1)
+        xc = x - x.mean(); r = np.zeros(len(lags)); good = sd >= min_sd
+        r_ok = np.zeros(ok.sum()); r_ok[good] = (Yc[good] @ xc) / (win * sd[good] * xc.std()); r[ok] = r_ok; S[si] = r
+    D = S.copy(); B = np.zeros(S.shape, int)
+    for si in range(1, len(starts)):
+        cm = np.maximum.accumulate(D[si - 1]); arg = np.zeros(len(lags), int); best = -np.inf; bi = 0
+        for li in range(len(lags)):
+            if D[si - 1, li] > best: best = D[si - 1, li]; bi = li
+            arg[li] = bi
+        D[si] = S[si] + cm; B[si] = arg
+    path = [int(np.argmax(D[-1]))]
+    for si in range(len(starts) - 1, 0, -1): path.append(B[si, path[-1]])
+    L = lags[path[::-1]]                                          # a freeze is a step: each second takes the lag of the nearest window centre
+    idx = np.clip(np.round((np.arange(n) - win / 2) / step).astype(int), 0, len(L) - 1)
+    return L[idx].astype(int)
+
+
+def meter_compare(ref_fit, other_fit, windows=(), bands=(0, 100, 125, 150, 175, 200, 250, 400, 1500), block_s=30, show=True):
+    """KICKR (other, e.g. the MyWhoosh FIT) against Stages (ref, the Edge FIT) on matched seconds, robust to MyWhoosh timer freezes
+    (align_monotone). windows = [(start_s, end_s), ...] in ref seconds (e.g. a test from the Edge laps). Band table from steady-ish
+    block_s blocks (by the ref's mean), ratio = sum(other) / sum(ref). Returns dict(ref, other, lag, jumps, bands, windows).
+    26 Nov 10-min all-out (Edge s 1210-1810): Stages 232.3 W, KICKR 223.5 W (ratio 0.962); band ratios 0.99 at 100-125 W and 0.96 at
+    200-250 W, about 3-5% below the 11-17 Nov sessions at the same powers (crank vs hub: drivetrain loss and its condition count)."""
+    from fitparse import FitFile
+    def rec(f):
+        out = [(m.get_value("timestamp"), m.get_value("power"), m.get_value("cadence")) for m in FitFile(f).get_messages("record")]
+        return [o for o in out if o[0] is not None]
+    r, o = rec(ref_fit), rec(other_fit); t0 = r[0][0]
+    n = int((r[-1][0] - t0).total_seconds()) + 1; P = np.full(n, np.nan); C = np.full(n, np.nan)
+    for ts, pw, cd in r:
+        i = int((ts - t0).total_seconds()); P[i] = np.nan if pw is None else pw; C[i] = np.nan if cd is None else cd
+    q = np.array([np.nan if x[1] is None else x[1] for x in o], float)       # other in its own record order (its clock is unreliable)
+    lag = align_monotone(P, q); j = np.arange(n) - lag; ok = (j >= 0) & (j < len(q)); K = np.full(n, np.nan); K[ok] = q[j[ok]]
+    jumps = [(int(i), int(lag[i - 1]), int(lag[i])) for i in range(1, n) if lag[i] != lag[i - 1]]
+    rows = []
+    for b in range(0, n - block_s, block_s):
+        x, y = P[b:b + block_s], K[b:b + block_s]
+        if np.isnan(x).any() or np.isnan(y).any() or x.mean() < 40 or y.mean() < 40: continue
+        rows.append((x.mean(), y.mean(), np.nanmean(C[b:b + block_s])))
+    R = np.array(rows) if rows else np.zeros((0, 3)); bt = []
+    for lo, hi in zip(bands[:-1], bands[1:]):
+        m = (R[:, 0] >= lo) & (R[:, 0] < hi) if len(R) else np.zeros(0, bool)
+        if m.sum() >= 2: bt.append(dict(lo=lo, hi=hi, n=int(m.sum()), ref_w=float(R[m, 0].mean()), other_w=float(R[m, 1].mean()),
+                                        ratio=float(R[m, 1].sum() / R[m, 0].sum()), cad=float(R[m, 2].mean())))
+    ws = []
+    for a_, b_ in windows:
+        x, y = P[a_:b_], K[a_:b_]; ws.append(dict(start_s=a_, end_s=b_, ref_w=float(np.nanmean(x)), other_w=float(np.nanmean(y)),
+                                                  ratio=float(np.nanmean(y) / np.nanmean(x)), lag=(int(lag[a_]), int(lag[b_ - 1]))))
+    res = dict(ref=P, other=K, cad=C, lag=lag, jumps=jumps, bands=bt, windows=ws)
+    if show:
+        print("lag path (other index = ref index - lag): start %d s, end %d s, %d steps" % (lag[0], lag[-1], len(jumps)))
+        for x in bt: print("  %4d-%4d W  n %3d  Stages %6.1f  KICKR %6.1f  ratio %.3f  cad %3.0f" % (x["lo"], x["hi"], x["n"], x["ref_w"], x["other_w"], x["ratio"], x["cad"]))
+        for w in ws: print("  window %d-%d s: Stages %.1f W, KICKR %.1f W, ratio %.4f, lag %d-%d s" % (w["start_s"], w["end_s"], w["ref_w"], w["other_w"], w["ratio"], *w["lag"]))
+    return res
+
+
 def _series_1hz(s):
     """fit_series dict -> (t0, P, H, C) on a 1 Hz grid of elapsed seconds; gaps (pauses) are 0 W and NaN HR/cadence."""
     t0 = int(np.floor(np.nanmin(s["t"]))); n = int(np.ceil(np.nanmax(s["t"]))) - t0 + 1; k = (np.asarray(s["t"]) - t0).astype(int)
@@ -1119,7 +1212,9 @@ def pd_fit(bests, model="2p", lo=120, hi=900, cp=None):
     """Power-duration model fit to best efforts {seconds: watts}. model="2p": CP and W' from work = CP*t + W' over lo..hi s (cp given: only
     W', least squares on P - CP = W'/t); model="morton": Morton 3P, P = W'/(t - k) + CP with k = W'/(CP - Pmax), fitted to durations <= hi.
     Returns dict(cp, wprime, pmax). 12 Nov (Stages bests): 2P 2-15 min CP 172 W / W' 15.2 kJ; CP fixed 175: W' 13.6 kJ; Morton 3P (5 s-20 min)
-    CP 183 W / W' 12.0 kJ / Pmax 813 W, but its 60-min power (186 W) overshoots the measured 175 W, so the mid-length bests are not maximal."""
+    CP 183 W / W' 12.0 kJ / Pmax 813 W, but its 60-min power (186 W) overshoots the measured 175 W, so the mid-length bests are not maximal.
+    26 Nov: the 10-min all-out (232.3 W) beat the 2P forecast at CP = FTP 175 / W' 20 kJ (208 W) by 12%: use CFG cp / wprime (pd_predict) or
+    pd_power_law for forecasts; the 5-min best (248 W, 15 Nov) is now clearly soft (2P 280 W, power law 1-10 min 262 W)."""
     t = np.array(sorted(bests), float); p = np.array([bests[k] for k in sorted(bests)], float)
     if model == "morton":
         from scipy.optimize import curve_fit

@@ -1,4 +1,4 @@
-# Project memory mirror: Pat, cycling | running (26 Nov 2026, chat 4)
+# Project memory mirror: Pat, cycling | running (28 Nov 2026)
 
 Fuller record of everything Pat has stated (facts, wishes, decisions), kept next to the compact Project memory files (topics/cycling.md, running.md, schedule.md, preferences.md). It began as a fallback when memory writes were blocked; since about 7 Nov the memory saves again, and [Pat 11 Nov] this file stays as the detailed, dated record (Markdown holds more than the memory files). Only Pat's statements go here; analyses belong in coach_notes.md.
 
@@ -304,6 +304,25 @@ aliases: [cycling training, power meter, FTP, 4DP, indoor trainer]
 - 26 Nov (17:47): uploaded the two additional manual runs (18 Oct, 10 Nov) and replaced the 25 Nov one, moving its start a minute later (seconds cannot be selected in a manual entry)
   - The leg pain: right leg again, at the upper thigh, mostly the front and right (outer) side, a spot pretty similar to 10 Nov, rather dull; mostly gone (about 1/10 soreness remains, likely very close to 0 without school sports); feels in solid shape for the evening ride
   - Asked whether the self-check values should be adjusted now or later (not knowledgeable on the details; up to Claude), as long as nothing is negatively affected
+- 26 Nov (23:13), the 10-min all-out ride (both FITs sent): very, very pleased, but slightly confused by the results
+  - Shoes: no dedicated running shoes, but a couple of pairs still solid for running, not perfect; the pair used recently is about 1-1.5 years old in total, not worn much in everyday situations before, no precise km estimate; a newer pair he definitely wants to try next week, to see whether it brings an improvement or the issue disappears anyway
+  - Followed the warm-up closely: Stages calibration around 8 min in (nominal value), two primers, then the 10 min; cut the remaining Z2 spin short (about 45 min of riding in total instead of 60; little lost, and there is a short ride tomorrow)
+  - Legs felt very solid throughout despite yesterday's pain and the slight soreness earlier
+  - Session line: RPE 9 for the 10 min (8 at 3 min, 8.5 at 6, 9 at 9), about 7 overall; feel 8 (very solid but not perfect, which is incredibly hard to come across); legs 9 (no additional soreness during the ride); sleep 7 h; resting HR 50 on the dot; nothing special; 500 ml water in total, about 250 ml before the all-out; room 15.5 C at the start, 17.5 C at the end; fan level 3 for the interval, 2 for the Z2 spin afterwards; no app crashes, a couple of app switches after the all-out; no shirt (as usual; he says when he wears one); the normal shorts (not bibs); window and door closed as usual (he says if one is ever open)
+  - Pacing: was quite confident he could do a good bit more than 210 W, as he is still rather strong on the attack and sprint side; the legs still need more adaptation for long rides and mainly long, prolonged efforts, which he would like the next plans to aim at; in hindsight a slightly stronger start and less of an upward trend might have given a couple more watts; overall very content and relieved with the result; hard to pace precisely as a first-timer (never did a true 10-min all-out before), taken as a lesson
+  - Suggests bumping the estimates, at least for the quicker trials, adapting the model in favour of that (e.g. the original upper bound of 185 W for the hour was high but not impossible; this test overshot the estimate by quite a bit)
+  - The two power sources disagree by quite a bit this time (9 W, not insignificant): dig into it and determine a 'true' 10-min power as precisely as possible
+  - Take all the time needed; ask for any input; the 5-hour usage limit was just reset
+- 27 Nov (17:05): did not commit the 26 Nov files yet (late, then forgot); commits after today's input
+  - Little time for riding today, about 30 minutes: a short but crisp ride, 5 min warm-up and cool-down and a 15-min sweet-spot interval at a planned 175 W (the trainer power set on the Edge); MyWhoosh crashed about 7 min into it, so it may have been less consistent than with MyWhoosh active; he did not reopen it (no two short sessions), so only the Edge file exists
+  - Knows it might have been a bit over what Claude would have recommended, but with little time anyway he went for this type of ride; asks to be told if it was significantly too hard; thinks it was fine despite about 3/10 leg soreness going into it
+  - Session line: feel 4, RPE 5, fan level 2 for the interval (only one, not too long)
+  - Thinks the weekend outdoor rides are still on track; Claude may check the weather; he is hopeful it is fine, and it is getting a bit warmer than the previous days
+- 28 Nov (13:30): definitely not making the century today; today's weather subpar as predicted; asked for tomorrow's forecast again and whether next Sunday (6 Dec) might be better suited
+- 28 Nov (16:37): likes the proposed week-4 plan (20-min test Tue 1 Dec, run Thu 3, aerobic check Sat 5, century Sun 6 Dec) and confirms it; tomorrow indoors is fine: 2+ hours on the trainer without prolonged efforts, perhaps some openers, not too intense
+  - Asks whether an easy Z2 endurance ride indoors today is suitable (bike still on the trainer; two rest days already this week; feels pretty solid, not amazing but more than fine enough for an easy indoor ride)
+  - Asks whether the 10- and 15-min steady-state intervals deserve a small bump in watts after the 10-min test and with the 20-min test coming: his profile is still on the stronger anaerobic side (up to about 10-15 min, comparatively worse beyond), so slightly higher targets might be sensible (not significantly, as the intervals are not anaerobic or very short); wants a few working values, slightly increasing over the remaining weeks
+  - Wants the remaining weeks sketched (not fully concrete in dates and wattages, a rough outline as discussed) in the md file and the csv
 
 ### Side plan and toolkit
 - 15 Nov: considering light home strength and mobility training on the side (every couple of days or daily; beginner-friendly, household items, no gym, brief; to support weight gain and cycling); logged only lightly, not part of the main plan; asked for Claude's view and some exercises
